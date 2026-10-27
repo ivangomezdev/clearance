@@ -4,6 +4,18 @@ Dashboard en español conectado a las ofertas públicas de Hidden Clearances. Pr
 
 ## Ejecutar
 
+### Vercel / Next.js
+
+El repositorio incluye `vercel.json` con el preset `nextjs`, instalación mediante `npm ci`, build `npm run build:vercel` y salida `.next`. Importa la raíz del repositorio en Vercel. El dashboard usa únicamente una API pública y no necesita variables de entorno para estas rutas.
+
+- `npm run dev:vercel`: desarrollo con Next.js.
+- `npm run build:vercel`: genera el build de Next.js y `.next/routes-manifest.json` que necesita Vercel.
+- `npm run start:vercel`: prueba local del build de producción.
+
+El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites y genera `dist/`; no es el build de Vercel. La configuración versionada selecciona explícitamente el comando correcto para Vercel. El acceso privado mediante ChatGPT corresponde al alojamiento Sites; Vercel aplica los controles de acceso configurados en tu proyecto de Vercel.
+
+### Sites / Cloudflare
+
 - `npm ci`
 - `npm run dev`
 - `npx tsc --noEmit`
