@@ -39,3 +39,9 @@ Dashboard en español conectado a las ofertas públicas de Hidden Clearances. Pr
 
 La paginación por número no es una instantánea atómica: ofertas añadidas o eliminadas mientras se carga pueden causar diferencias entre elementos únicos y total reportado. La interfaz indica ambos. Se respeta cualquier respuesta de error o limitación de la API, incluidos 401/403/429. Ante 429 se conserva el avance, se espera al menos 65 segundos o Retry-After (lo que sea mayor) y se reintenta la misma página hasta tres veces antes de mostrar error. El servicio externo puede cambiar sus rutas, esquema o disponibilidad. Las imágenes se cargan desde las URLs que devuelve el origen. El precio y disponibilidad definitivos se comprueban en la tienda. No hay base de datos ni copia persistente del catálogo.
 
+
+### Límite de paginación histórica verificado
+
+Aunque la respuesta anuncia 271 páginas y 13.513 registros, al solicitar las páginas 201 o 271 el servicio devuelve `pagination.page: 200` y los mismos 50 IDs de la página 200. La carga histórica observada alcanzó 10.000 IDs únicos. El dashboard comprueba que la página recibida coincide con la solicitada, detiene la carga si el servidor la limita y muestra el motivo, conservando los productos. No presenta ese historial como completo. El catálogo activo (36 páginas / 1.754 registros durante la prueba) sí se cargó completo. Los totales varían con el tiempo.
+
+Sitio privado publicado: https://clearance-radar-leoda.vocal-aphid-2607.chatgpt.site

@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Radar,LayoutGrid,Bookmark,Activity,ArrowUpRight,ArrowDown,Search,SlidersHorizontal,RefreshCw,Download,ChevronLeft,ChevronRight,X,Check,Copy,Store,Tag,Package,Clock,ExternalLink,Code2,Pause,CheckCircle2,AlertCircle,List,Filter,ArrowRight} from 'lucide-react';
-import {Deal,discount,expired,price,retailerName,safeUrl,sourceUrl} from '../lib/deals';
+import {Deal,discount,expired,price,retailerName,safeUrl,sourceUrl,validatePage} from '../lib/deals';
 
 type Log={id:number;path:string;status:number;ms:number;count:number;time:string;pagination?:{page:number;totalPages:number;total:number};error?:string};
 type CatalogResponse={success?:boolean;data?:Deal[];pagination?:{page:number;totalPages:number;total:number};error?:string};
@@ -32,6 +32,7 @@ export default function Dashboard(){
      if(r.status===429&&attempt<3){const header=r.headers.get('retry-after');const seconds=header?(Number.isFinite(Number(header))?Number(header):Math.max(0,(Date.parse(header)-Date.now())/1000)):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);setWaiting(`Límite de la API · reanudación en ${Math.ceil(delay)} s`);await pause(delay*1000);setWaiting('');return getPage(p,attempt+1);}
      if(!r.ok||body.success===false)throw new Error(r.status===429?'La API limitó las solicitudes. Espera un momento y vuelve a sincronizar.':body.error||`Error HTTP ${r.status}`);
      if(!Array.isArray(body.data)||!body.pagination||!Number.isInteger(body.pagination.totalPages))throw new Error('El formato de la API ha cambiado.');
+     validatePage(p,body.pagination.page);
      body.data.forEach((d:Deal)=>{if(d.id)collected.set(d.id,d);});completed++;
      setDeals([...collected.values()]);setTotal(body.pagination.total);setProgress({done:completed,pages:body.pagination.totalPages});setLastResponse(body);
      return body.pagination.totalPages as number;
