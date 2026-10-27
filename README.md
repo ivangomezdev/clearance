@@ -6,7 +6,7 @@ Dashboard en español conectado a las ofertas públicas de Hidden Clearances. Pr
 
 ### Vercel / Next.js
 
-El repositorio incluye `vercel.json` con el preset `nextjs`, instalación mediante `npm ci`, build `npm run build:vercel` y salida `.next`. Importa la raíz del repositorio en Vercel. El dashboard usa únicamente una API pública y no necesita variables de entorno para estas rutas.
+El repositorio incluye `vercel.json` con el preset `nextjs`, instalación mediante `npm ci`, build `npm run build:vercel` y salida `.next`. Importa la raíz del repositorio en Vercel. El dashboard funciona con la API pública sin variables obligatorias. La sesión opcional de Hidden Clearances y Discord usan secretos del servidor descritos más abajo.
 
 - `npm run dev:vercel`: desarrollo con Next.js.
 - `npm run build:vercel`: genera el build de Next.js y `.next/routes-manifest.json` que necesita Vercel.
@@ -27,7 +27,7 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 1. `https://www.hiddenclearances.com/deals` carga un cliente Next.js. Sus módulos `useInfiniteDeals` y `clearanceGet` consultan `https://api.hiddenclearances.com/api/v1/deals` sin autenticación (`skipAuth: true`).
 2. La respuesta es `{success, data: Deal[], pagination: {page, limit, total, totalPages}}`. El límite máximo observado es 50, incluso al solicitar 100. Sin `activeOnly=false`, la API entrega solo ofertas activas. Se observaron unas 1.750 activas y más de 13.500 incluyendo historial; estos valores cambian.
 3. El cliente original admite `retailer`, `type`, `category`, `search`, `sort`, `activeOnly`, `postedWithinHours` y `tag`. Este dashboard recupera páginas completas y filtra localmente el conjunto recibido.
-4. Rutas públicas adicionales observadas: `/api/v1/deals/retailers`, `/api/v1/deal-tags` y `/api/v1/feed`. El feed devolvió un conjunto distinto y limitado (400 elementos en la prueba); por ello el catálogo usa `/deals`. No se agregan datos de áreas privadas, premium o inventarios que exijan sesión.
+4. Rutas públicas adicionales observadas: `/api/v1/deals/retailers`, `/api/v1/deal-tags` y `/api/v1/feed`. El feed devolvió un conjunto distinto y limitado (400 elementos en la prueba); el catálogo principal usa `/deals` y se complementa con entradas `in_store` desbloqueadas del feed. No se agregan datos de áreas privadas, premium o inventarios que exijan sesión.
 5. La ficha de producto original trae su información inicial en HTML/React Server Components. Al montar el detalle, `fetchDealRedirectUrl(id)` precarga `GET /api/v1/deals/{id}/redirect-url` sin autenticación. Devuelve `{success:true,data:{redirectUrl,affiliateProvider}}`. El botón `Get Deal` abre esa URL en otra pestaña; el cliente original dispone del fallback `/go/{id}` y envía un evento de clic. Este dashboard resuelve el enlace y conserva los parámetros afiliados originales; no añade eventos de tracking.
 6. Ejemplo comprobado: teclado Glorious de USD 350 a USD 64, ID `d0d23738-096c-4f3a-84e3-d21443fd81a9`. `dealLink` era un enlace de Amazon, pero el destino real del CTA fue `https://secretclearances.com/go/b0dfww?tag=secretdeal05a-20`, con `affiliateProvider: amazon_go`. Al abrir el CTA original se llegó a Amazon. Por eso no se sustituye `redirectUrl` por `dealLink`.
 
@@ -45,7 +45,7 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 
 ## Servidor
 
-`/api/deals` y `/api/redirect` son proxies de lectura con rutas fijas, validación de parámetros, timeout de 20 segundos y caché privada de 30 segundos. No requieren ni copian cookies o tokens del navegador. El servidor evita depender del CORS del servicio externo; solo acepta los parámetros necesarios y no permite destinos arbitrarios.
+`/api/deals` y `/api/redirect` son proxies de lectura con rutas fijas, validación de parámetros, timeout de 20 segundos y respuestas privadas sin caché. Sin configuración funcionan en modo público. Opcionalmente usan HC_ACCESS_TOKEN del servidor; no reciben cookies del navegador de los visitantes. El servidor evita depender del CORS del servicio externo; solo acepta los parámetros necesarios y no permite destinos arbitrarios.
 
 ## Límites
 
@@ -93,3 +93,17 @@ La fuente está implementada, pero no se han leído ni publicado mensajes reales
 Referencias: [Get Channel Messages](https://docs.discord.com/developers/resources/message#get-channel-messages), [Message Content Intent](https://docs.discord.com/developers/events/gateway#message-content-intent).
 
 Validación de normalización: `node --experimental-strip-types --test tests/deals.test.mjs tests/discord.test.mjs`.
+
+## Sesión de Hidden Clearances y ofertas en tienda
+
+- `HC_ACCESS_TOKEN` es un secreto opcional del servidor, extraído de la cookie Supabase de Hidden Clearances proporcionada por el usuario. Configurarlo en las variables de ejecución de Sites o Vercel y desplegar de nuevo. En local se usa `.env.local`, ignorado por Git. Nunca debe llevar prefijo `NEXT_PUBLIC_`.
+- La extracción reconoce la cookie completa o sus fragmentos `.0`, `.1`, etc., y conserva exclusivamente `access_token`. No se guardan ni se envían las cookies de analítica ni el refresh token.
+- El servidor usa `Authorization: Bearer …` exclusivamente contra `https://api.hiddenclearances.com`, en las rutas fijas de catálogo, feed y resolución de ofertas. No devuelve el token: solo el estado de sesión y su vencimiento.
+- Si falta el secreto se usa acceso público; si caduca o la API responde 401 se vuelve al acceso público y la interfaz lo indica. No se renueva silenciosamente la sesión: para reemplazarla se configura un nuevo token de una sesión válida y se vuelve a desplegar.
+- Una sesión no concede permisos adicionales por sí misma. La cuenta probada no tenía Premium y devolvía los mismos totales de catálogo y feed que el acceso público.
+- Después del catálogo principal se consultan las páginas de `/api/v1/feed`. Se agregan únicamente elementos `kind: in_store` con `locked: false` que no estén ya presentes por ID. Las entradas restringidas no se muestran ni se intenta resolverlas por otra ruta.
+- En la prueba inicial el feed devolvió 400 elementos: 200 online y 200 en tienda, de los cuales 74 estaban restringidos. Por tanto había hasta 126 entradas de tienda accesibles antes de eliminar duplicados. Los totales varían.
+- Las ofertas en tienda llevan al enlace original de la oferta o del comercio; no se tratan como el CTA Get Deal de las ofertas online. Se omiten autores y demás metadatos de cuenta del feed.
+- La carga usa pausas y respeta `Retry-After`. La barra de estado distingue catálogo, ofertas adicionales en tienda y restricciones del origen.
+
+Validación completa: `node --experimental-strip-types --test tests/deals.test.mjs tests/discord.test.mjs tests/hc-session.test.mjs`.

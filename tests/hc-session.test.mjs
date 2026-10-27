@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {sessionAccess,accessTokenFromCookie} from '../lib/hc-session.ts';
+import {feedDeals} from '../lib/feed.ts';
+const now=Date.parse('2026-10-27T20:00:00Z');
+const token=(claims)=>Buffer.from('{}').toString('base64url')+'.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.synthetic-test-signature';
+const valid=token({iss:'https://cdqqxarqppyvctffzsax.supabase.co/auth/v1',exp:now/1000+3600});
+test('extracts only access token from out-of-order chunked Supabase cookie',()=>{const value='base64-'+Buffer.from(JSON.stringify({access_token:valid,refresh_token:'not-to-be-forwarded'})).toString('base64url');const split=Math.floor(value.length/2);const raw=`_ga=analytics; sb-cdqqxarqppyvctffzsax-auth-token.1=${value.slice(split)}; sb-cdqqxarqppyvctffzsax-auth-token.0=${value.slice(0,split)}; other=ignored`;assert.equal(accessTokenFromCookie(raw),valid);});
+test('never uses expired, invalid or foreign-project credentials',()=>{assert.equal(sessionAccess(valid,now).token,valid);assert.equal(sessionAccess(valid,now+3600001).token,undefined);assert.equal(sessionAccess(valid,now+3600001).info.status,'expired');assert.equal(sessionAccess(token({iss:'https://other.example',exp:now/1000+3600}),now).info.status,'invalid');assert.equal(sessionAccess('broken').token,undefined);assert.deepEqual(sessionAccess(undefined).info,{status:'public'});});
+test('incomplete cookie and arbitrary token input produce generic errors',()=>{assert.throws(()=>accessTokenFromCookie('sb-cdqqxarqppyvctffzsax-auth-token.1=not-complete'),/incompleta/);assert.throws(()=>accessTokenFromCookie('other=private-test-value'),e=>!e.message.includes('private-test-value'));});
+const item={id:'store-1',slug:'store-offer',title:'Offer fixture',retailer:'home_depot',kind:'in_store',source:'lead',locked:false,price:'25',originalPrice:'50',discountPercent:50,isInStock:true,createdAt:'2026-10-27T20:00:00Z',poster:{name:'Not exported'}};
+test('feed adds accessible in-store entries only, without poster or unknown fields',()=>{const result=feedDeals([item,{...item,id:'locked',locked:true},{...item,id:'online',kind:'online'},{...item,id:'unspecified',locked:undefined}]);assert.equal(result.length,1);assert.equal(result[0].source,'feed');assert.equal(result[0].discountedPrice,'25');assert.equal(result[0].discountOff,'0.5');assert.equal(result[0].poster,undefined);});
