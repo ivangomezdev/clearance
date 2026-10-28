@@ -23,7 +23,7 @@ export async function GET(request:Request){
   path=`/api/deals?${params}`;
  }
  try{
-  const upstream=await fetch(CE_ORIGIN+path,{headers:{Accept:slug?'text/html':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)});
+  const upstream=await fetch(CE_ORIGIN+path,{headers:{Accept:slug?'text/html':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(20000)});
   if(upstream.status===429){const retry=upstream.headers.get('retry-after');if(retry)headers['Retry-After']=retry;return reply({error:'El origen limitó las solicitudes. Espera antes de reintentar.',session},429);}
   if(upstream.status===401||upstream.status===403)return reply({error:'Clearance Explorer rechazó la sesión o el acceso. Actualiza la sesión del servidor.',session},upstream.status);
   if(!upstream.ok)return reply({error:`No se pudo cargar la oferta (HTTP ${upstream.status}).`,session},502);

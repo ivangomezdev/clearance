@@ -11,7 +11,7 @@ export async function clearanceToken():Promise<string|undefined>{
  if(cached?.key===key&&cached.expires>Date.now()+10000)return cached.token;
  if(pending?.key===key)return pending.promise;
  const promise=(async()=>{
-  const r=await fetch(`${CLERK_ORIGIN}/v1/client/sessions/${encodeURIComponent(id)}/tokens`,{method:'POST',headers:{Cookie:`__client=${client}`,Origin:CE_ORIGIN,Referer:CE_ORIGIN+'/',Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body:'',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});
+  const r=await fetch(`${CLERK_ORIGIN}/v1/client/sessions/${encodeURIComponent(id)}/tokens`,{method:'POST',headers:{Cookie:`__client=${client}`,Origin:CE_ORIGIN,Referer:CE_ORIGIN+'/',Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body:'',redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Error('No se pudo renovar la sesión de Clearance Explorer. Vuelve a iniciar sesión y actualiza sus secretos.');
   const data=await r.json() as {jwt?:string;response?:{jwt?:string}};
   const token=data.response?.jwt||data.jwt,info=staffSession(token);
