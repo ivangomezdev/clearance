@@ -107,3 +107,22 @@ Validación de normalización: `node --experimental-strip-types --test tests/dea
 - La carga usa pausas y respeta `Retry-After`. La barra de estado distingue catálogo, ofertas adicionales en tienda y restricciones del origen.
 
 Validación completa: `node --experimental-strip-types --test tests/deals.test.mjs tests/discord.test.mjs tests/hc-session.test.mjs`.
+
+
+## Staffspicks — Clearance Explorer
+
+Nueva sección independiente en la barra lateral. Usa GET /api/staffspicks como proxy de lectura de /api/deals?source_type=user&sort=recent&page=N&limit=12. Carga al aproximarse a 300 px del final, con botón manual alternativo, una solicitud a la vez y separación mínima de 1,25 s. Deduplica por ID, conserva resultados ante errores y respeta Retry-After. Los filtros de tienda/descuento/orden reinician las páginas; la búsqueda y los favoritos solo abarcan lo cargado.
+
+La vista sin credenciales entrega únicamente la primera página pública (6 ofertas en la comprobación del 28 de octubre de 2026), marcada como limitada. No presenta esa vista como un catálogo completo ni intenta saltar la autenticación.
+
+### Sesión
+
+Configurar CE_ACCESS_TOKEN como secreto del servidor en Sites o Vercel y volver a desplegar; en local puede usarse .env.local, ignorado por Git. Nunca usar NEXT_PUBLIC_. Se envía exclusivamente a https://clearanceexplorer.com en las rutas fijas del catálogo/detalle. No se acepta un destino arbitrario ni se devuelve el token al cliente. El JWT se revisa para detectar formato, issuer y caducidad; la API de origen valida su autenticidad y permisos. Las respuestas usan private, no-store.
+
+Los tokens de sesión de Clerk caducan; guardar un token no garantiza una conexión permanente. Para renovación bajo demanda se admite CE_CLIENT_TOKEN (solo el valor de la cookie __client de clerk.clearanceexplorer.com) junto con CE_SESSION_ID (sess_…). El servidor solicita un token nuevo a POST https://clerk.clearanceexplorer.com/v1/client/sessions/{id}/tokens y reutiliza el JWT en memoria hasta 10 segundos antes de vencer. No se envían cookies de Google/Twitter ni se modifica el estado de login. La renovación depende de que la sesión original siga válida; no prolonga una sesión revocada ni garantiza duración indefinida. Este flujo requiere verificación con las credenciales reales; sin ellas solo se ha comprobado el contrato mediante pruebas. Si el origen rechaza la renovación, se detiene con un aviso. La sesión del navegador original no se transfiere automáticamente al servidor. Al terminar esta implementación todavía no se había proporcionado CE_ACCESS_TOKEN: la carga autenticada queda pendiente de configuración y prueba con una credencial válida.
+
+### Detalle y compra
+
+El proxy lee el HTML/RSC de /u/slug y extrae solo el objeto de oferta y viewDealUrl correspondiente, sin ejecutar scripts ni insertar HTML externo. El botón de compra conserva la URL original y sus afiliados; no reproduce los POST de vistas, likes o guardados del origen. Los favoritos de esta sección son locales. Se omiten los identificadores de autores y metadatos de cuentas. Los precios se conservan tal como vienen, aun si el título anuncia otra cantidad; cero muestra Ver condiciones.
+
+Verificación: node --experimental-strip-types --test tests/staffspicks.test.mjs. La inspección del flujo observó el scroll añadiendo 12 → 23 → 32 tarjetas únicas y el CTA de Kobe IX redirigiendo a Nike.
