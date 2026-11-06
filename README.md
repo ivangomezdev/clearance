@@ -96,17 +96,23 @@ Validación de normalización: `node --experimental-strip-types --test tests/dea
 
 ## Sesión de Hidden Clearances y ofertas en tienda
 
-- `HC_ACCESS_TOKEN` es un secreto opcional del servidor, extraído de la cookie Supabase de Hidden Clearances proporcionada por el usuario. Configurarlo en las variables de ejecución de Sites o Vercel y desplegar de nuevo. En local se usa `.env.local`, ignorado por Git. Nunca debe llevar prefijo `NEXT_PUBLIC_`.
-- La extracción reconoce la cookie completa o sus fragmentos `.0`, `.1`, etc., y conserva exclusivamente `access_token`. No se guardan ni se envían las cookies de analítica ni el refresh token.
-- El servidor usa `Authorization: Bearer …` exclusivamente contra `https://api.hiddenclearances.com`, en las rutas fijas de catálogo, feed y resolución de ofertas. No devuelve el token: solo el estado de sesión y su vencimiento.
-- Si falta el secreto se usa acceso público; si caduca o la API responde 401 se vuelve al acceso público y la interfaz lo indica. No se renueva silenciosamente la sesión: para reemplazarla se configura un nuevo token de una sesión válida y se vuelve a desplegar.
-- Una sesión no concede permisos adicionales por sí misma. La cuenta probada no tenía Premium y devolvía los mismos totales de catálogo y feed que el acceso público.
-- Después del catálogo principal se consultan las páginas de `/api/v1/feed`. Se agregan únicamente elementos `kind: in_store` con `locked: false` que no estén ya presentes por ID. Las entradas restringidas no se muestran ni se intenta resolverlas por otra ruta.
-- En la prueba inicial el feed devolvió 400 elementos: 200 online y 200 en tienda, de los cuales 74 estaban restringidos. Por tanto había hasta 126 entradas de tienda accesibles antes de eliminar duplicados. Los totales varían.
-- Las ofertas en tienda llevan al enlace original de la oferta o del comercio; no se tratan como el CTA Get Deal de las ofertas online. Se omiten autores y demás metadatos de cuenta del feed.
-- La carga usa pausas y respeta `Retry-After`. La barra de estado distingue catálogo, ofertas adicionales en tienda y restricciones del origen.
+La conexión renovable se realiza desde `/connect/hidden-clearances`. El usuario guarda el marcador generado, lo activa en su sesión habitual de Hidden Clearances y confirma la conexión en Radar. El marcador toma únicamente los tokens de Hidden Clearances; no envía contraseña, sesión de Google, cookies de analítica ni perfil. No lleva credenciales en URLs ni registros. La transferencia usa una ventana de Radar, `postMessage` con origen/destino exactos, comprobación de ventana y un desafío de un solo flujo; la recepción vence a los dos minutos.
 
-Validación completa: `node --experimental-strip-types --test tests/deals.test.mjs tests/discord.test.mjs tests/hc-session.test.mjs`.
+El servidor verifica la sesión en el emisor Supabase antes de conectarla. Guarda los dos tokens en cookies propias cifradas con AES-GCM y autenticadas, con HttpOnly, SameSite=Lax, Secure y prefijo __Host- en HTTPS. Si hace falta, divide la cookie en partes menores de 4 KB. La conexión pertenece al navegador del visitante, no se publica como una credencial compartida.
+
+Configurar **HC_SESSION_SECRET** como secreto del servidor de al menos 32 bytes aleatorios codificados en base64url, tanto en Vercel como en desarrollo. Se usa exactamente una clave de 32 bytes; no lleva prefijo NEXT_PUBLIC_. Ya se generó una clave local en .env.local (ignorada por Git); el alojamiento necesita su propia clave configurada antes de desplegar. Cambiarla invalida las copias de sesión conectadas. No se requiere base de datos para este flujo, porque la cookie cifrada conserva la rotación entre solicitudes e instancias.
+
+Las rutas de catálogo, feed, redirección y stock renuevan la sesión cuando quedan dos minutos de vigencia, guardan el reemplazo mediante Set-Cookie incluso si falla una consulta posterior y reintentan una sola vez al recibir 401. Las solicitudes simultáneas comparten brevemente la renovación en una instancia; entre instancias se conserva el comportamiento de rotación/reutilización admitido por Supabase. Un error temporal conserva la copia para reintentar; una credencial revocada la elimina y requiere reconectar. La sesión original puede revocarse o tener límites de vigencia del proveedor; no se promete acceso permanente.
+
+`GET /api/hc-session` devuelve solo estado y si la conexión está configurada. POST conecta, exige JSON y el mismo origen y rechaza acceso por HTTP fuera de loopback. DELETE olvida exclusivamente la copia de Radar; no cierra la sesión original. No se permite CORS para estas escrituras. Las respuestas usan private, no-store y nunca devuelven los tokens.
+
+**HC_ACCESS_TOKEN** sigue siendo compatible como secreto opcional de servidor para la configuración anterior; por sí solo no permite renovación automática. Si no hay cookie conectada ni token válido, se usa el catálogo público. Las consultas de stock requieren sesión. La clave pública anónima del proyecto Supabase, publicada por Hidden Clearances, se conserva en lib/hc-public.ts y no concede una sesión de usuario.
+
+Después del catálogo se agregan únicamente ofertas del feed kind: in_store con locked: false que no estén presentes por ID. Las entradas restringidas se omiten. Una conexión no concede Premium ni permite saltar las restricciones del origen. Se conservan las pausas y Retry-After del catálogo.
+
+Validación: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/hc-renewal.test.mjs tests/hc-bridge.test.mjs tests/store-stock.test.mjs`.
+
+Referencias: [sesiones y rotación de Supabase](https://supabase.com/docs/guides/auth/sessions), [API de renovación](https://github.com/supabase/auth/blob/master/openapi.yaml).
 
 
 ## Staffspicks — Clearance Explorer
@@ -126,3 +132,14 @@ Los tokens de sesión de Clerk caducan; guardar un token no garantiza una conexi
 El proxy lee el HTML/RSC de /u/slug y extrae solo el objeto de oferta y viewDealUrl correspondiente, sin ejecutar scripts ni insertar HTML externo. El botón de compra conserva la URL original y sus afiliados; no reproduce los POST de vistas, likes o guardados del origen. Los favoritos de esta sección son locales. Se omiten los identificadores de autores y metadatos de cuentas. Los precios se conservan tal como vienen, aun si el título anuncia otra cantidad; cero muestra Ver condiciones.
 
 Verificación: node --experimental-strip-types --test tests/staffspicks.test.mjs. La inspección del flujo observó el scroll añadiendo 12 → 23 → 32 tarjetas únicas y el CTA de Kobe IX redirigiendo a Nike.
+## Home Depot: ZIP y enlaces de sucursal
+
+El detalle de las ofertas de Home Depot importadas del feed permite introducir un ZIP de Estados Unidos, consultar tiendas cercanas y abrir el producto directamente en una sucursal. El feed conserva `sku` (Internet #) para esta consulta. El enlace usa `https://www.homedepot.com/p/{sku}?store={storeId}`; el código de tienda se conserva como texto, incluidos ceros iniciales. La lista muestra dirección, distancia en millas, existencias, ubicación y precio de cada sucursal cuando la fuente los incluye. Se ordena por cercanía, con las tiendas con stock primero; las que no tienen stock se muestran opcionalmente. No se interpreta el precio general de la oferta como el precio de todas las sucursales.
+
+`GET /api/stock?sku=339011675&zip=33101` es un proxy de servidor hacia la ruta fija `/api/v1/homedepot/stock`. Valida los identificadores, usa `HC_ACCESS_TOKEN`, no devuelve credenciales, no sigue redirecciones y conserva `Retry-After`. El formulario respeta la espera ante 429, cancela consultas al cerrar la ficha y distingue errores de autenticación de inventario vacío. Las ofertas sin un número de producto válido conservan un enlace explícito a la fuente.
+
+Estado de autenticación: esta API requiere una sesión. Está integrada con la conexión y renovación automática descritas arriba. La conexión inicial requiere activar el marcador en la sesión de Hidden Clearances y confirmarla en Radar. No se han extraído las credenciales reales de la pestaña del agente; las pruebas de renovación usan sesiones sintéticas y un emisor simulado.
+
+Comprobación del 6 de noviembre de 2026: la página original autenticada devolvió siete sucursales con stock para el ZIP de prueba 33101; N Miami Beach usa `store=0251`. El formulario local y los estados HTTP 400/401 se verificaron; la consulta local con sesión vigente queda pendiente porque la credencial configurada está vencida. El proyecto antiguo de Sites devolvió `Sites project not found`. Se verificó que el repositorio actual publica https://clearance-two.vercel.app en Vercel. La publicación y configuración de la clave de cifrado quedan pendientes de conectar ese alojamiento.
+
+Pruebas: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/store-stock.test.mjs`. Compilación: `npm run build:vercel`.

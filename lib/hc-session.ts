@@ -1,6 +1,6 @@
 const COOKIE_NAME='sb-cdqqxarqppyvctffzsax-auth-token';
 const ISSUER='https://cdqqxarqppyvctffzsax.supabase.co/auth/v1';
-export type SessionInfo={status:'public'|'active'|'expired'|'invalid'|'rejected';expiresAt?:string};
+export type SessionInfo={status:'public'|'active'|'expired'|'invalid'|'rejected';expiresAt?:string;renewable?:boolean;renewalError?:boolean};
 export function sessionAccess(token:string|undefined,now=Date.now()):{token?:string;info:SessionInfo}{
  if(!token)return {info:{status:'public'}};
  try{const parts=token.trim().split('.');if(parts.length!==3)throw Error();const claims=JSON.parse(Buffer.from(parts[1],'base64url').toString());if(claims.iss!==ISSUER||typeof claims.exp!=='number'||!Number.isFinite(claims.exp))throw Error();const expiresAt=new Date(claims.exp*1000).toISOString();if(claims.exp*1000<=now)return {info:{status:'expired',expiresAt}};return {token:token.trim(),info:{status:'active',expiresAt}};}catch{return {info:{status:'invalid'}};}
