@@ -2,7 +2,7 @@ import {sessionAccess, type SessionInfo} from './hc-session.ts';
 import {HC_AUTH_ORIGIN, HC_ANON_KEY} from './hc-public.ts';
 
 export type HcCredentials = {accessToken: string; refreshToken: string};
-type Config = {HC_SESSION_SECRET?: string; HC_ACCESS_TOKEN?: string; [key: string]: string | undefined};
+export type HcConfig = {HC_SESSION_SECRET?: string; HC_ACCESS_TOKEN?: string; [key: string]: string | undefined};
 type Fetcher = typeof fetch;
 export type HcSession = {
   token?: string;
@@ -67,11 +67,11 @@ function applyCookies(response: Response, cookies: string[]) {
 }
 export function clearHcSession(request: Request, response: Response) { return applyCookies(response, setCookies(request, null)); }
 
-class RefreshFailure extends Error {
+export class RefreshFailure extends Error {
   readonly permanent: boolean;
   constructor(permanent: boolean) { super('No se pudo renovar la sesión de Hidden Clearances.'); this.permanent = permanent; }
 }
-async function rotate(value: HcCredentials, fetcher: Fetcher, now: () => number): Promise<HcCredentials> {
+export async function rotateHcCredentials(value: HcCredentials, fetcher: Fetcher, now: () => number): Promise<HcCredentials> {
   const key = Buffer.from(await crypto.subtle.digest('SHA-256', encoder.encode(value.refreshToken))).toString('base64url');
   for (const [id, flight] of flights) if (flight.until < now()) flights.delete(id);
   const current = flights.get(key);
@@ -103,7 +103,11 @@ async function rotate(value: HcCredentials, fetcher: Fetcher, now: () => number)
   } catch (e) { flights.delete(key); throw e; }
 }
 
-export async function hcSessionForRequest(request: Request, config: Config = process.env, fetcher: Fetcher = fetch, now = () => Date.now()): Promise<HcSession> {
+export async function hcSessionForRequest(request: Request, config: HcConfig = process.env, fetcher: Fetcher = fetch, now = () => Date.now()): Promise<HcSession> {
+  if (config.HC_SHARED_SESSION_MODE === 'true') {
+    const {sharedHcSession} = await import('./hc-shared-session.ts');
+    return sharedHcSession(config, fetcher, now);
+  }
   let value: HcCredentials | undefined, cookieUpdates: string[] = [], hasCookie = false;
   const fallback = sessionAccess(config.HC_ACCESS_TOKEN, now());
   const session: HcSession = {
@@ -111,7 +115,7 @@ export async function hcSessionForRequest(request: Request, config: Config = pro
     async refresh() {
       if (!value) return false;
       try {
-        const next = await rotate(value, fetcher, now);
+        const next = await rotateHcCredentials(value, fetcher, now);
         const sealed = await sealHcSession(next, config.HC_SESSION_SECRET);
         value = next; session.token = next.accessToken;
         session.info = {...sessionAccess(next.accessToken, now()).info, renewable: true};
@@ -145,19 +149,24 @@ export async function hcSessionForRequest(request: Request, config: Config = pro
 }
 
 // Connect only this browser's session. Verification is performed by the issuer.
-export async function connectHcSession(request: Request, input: unknown, config: Config = process.env, fetcher: Fetcher = fetch): Promise<Response> {
+export async function verifyHcCredentials(input: unknown, config: HcConfig = process.env, fetcher: Fetcher = fetch): Promise<HcCredentials> {
   await secretKey(config.HC_SESSION_SECRET);
   let value = credentials(input);
-  if (!sessionAccess(value.accessToken).token) value = await rotate(value, fetcher, () => Date.now());
+  if (!sessionAccess(value.accessToken).token) value = await rotateHcCredentials(value, fetcher, () => Date.now());
   const response = await fetcher(`${HC_AUTH_ORIGIN}/auth/v1/user`, {
     headers: {apikey: HC_ANON_KEY, Authorization: `Bearer ${value.accessToken}`}, signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error',
   });
   if (!response.ok) throw Error('La sesión no es válida. Conecta de nuevo desde Hidden Clearances.');
   const user = await response.json() as {id?: string};
   if (!user.id || user.id !== claims(value.accessToken).sub) throw Error('La sesión no es válida.');
+  return value;
+}
+
+export async function connectHcSession(request: Request, input: unknown, config: HcConfig = process.env, fetcher: Fetcher = fetch): Promise<Response> {
+  const value = await verifyHcCredentials(input, config, fetcher);
   return applyCookies(Response.json({session: {...sessionAccess(value.accessToken).info, renewable: true}}), setCookies(request, await sealHcSession(value, config.HC_SESSION_SECRET)));
 }
 
-export function sessionConnectionConfigured(config: Config = process.env) {
+export function sessionConnectionConfigured(config: HcConfig = process.env) {
   try { return Buffer.from(config.HC_SESSION_SECRET || '', 'base64url').length === 32; } catch { return false; }
 }

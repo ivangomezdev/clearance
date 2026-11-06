@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return Response.json({error: 'Introduce un ZIP de 5 dígitos y un producto de Home Depot válido.'}, {status: 400, headers});
   }
   const session = await hcSessionForRequest(request);
-  if (!session.token) return session.apply(Response.json({error: 'Conecta tu sesión de Hidden Clearances para consultar tiendas.', session: session.info}, {status: 401, headers}));
+  if (!session.token) return session.apply(Response.json({error: 'La consulta de tiendas está temporalmente en preparación. Vuelve a intentar más tarde.', session: session.info}, {status: 401, headers}));
   try {
     const send = () => fetch(`https://api.hiddenclearances.com/api/v1/homedepot/stock?sku=${encodeURIComponent(sku)}&zip=${encodeURIComponent(zip)}`, {
       headers: {Accept: 'application/json', Authorization: `Bearer ${session.token!}`},
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     let response = await send();
     if (response.status === 401 && await session.refresh()) response = await send();
     if (!response.ok) {
-      const error = response.status === 401 ? 'La sesión fue revocada o no pudo renovarse. Conecta de nuevo Hidden Clearances.'
+      const error = response.status === 401 ? 'La conexión de inventario no está disponible en este momento. Vuelve a intentar más tarde.'
         : response.status === 403 ? 'La cuenta de Hidden Clearances no tiene acceso a esta consulta.'
         : response.status === 429 ? 'Se alcanzó el límite de consultas. Espera antes de volver a buscar.'
         : 'No se pudo consultar el inventario de las tiendas. Vuelve a intentar.';

@@ -56,7 +56,7 @@ export function StoreAvailability({sku}: {sku?: string}) {
         <button className="primary" disabled={loading || cooldown > 0}>{loading ? <><RefreshCw size={15} className="spin"/> Consultando…</> : cooldown > 0 ? `Espera ${cooldown} s` : 'Buscar tiendas'}</button></div>
     </form>
     {loading && <p role="status" className="buy-note">Consultando inventario cercano. Puede tardar hasta dos minutos.</p>}
-    {error && <p className="redirect-warning" role="alert">{error} <a href="/connect/hidden-clearances">Conectar Hidden Clearances</a></p>}
+    {error && <p className="redirect-warning" role="alert">{error}</p>}
     {result && <div className="stock-results" aria-live="polite">
       <p>{available} {available === 1 ? 'tienda con existencias' : 'tiendas con existencias'} cerca de {result.zip}</p>
       <label className="stock-empty-toggle"><input type="checkbox" checked={showEmpty} onChange={event => setShowEmpty(event.target.checked)}/> Mostrar tiendas sin existencias</label>

@@ -94,25 +94,39 @@ Referencias: [Get Channel Messages](https://docs.discord.com/developers/resource
 
 Validación de normalización: `node --experimental-strip-types --test tests/deals.test.mjs tests/discord.test.mjs`.
 
-## Sesión de Hidden Clearances y ofertas en tienda
+## Sesión compartida de Hidden Clearances
 
-La conexión renovable se realiza desde `/connect/hidden-clearances`. El usuario guarda el marcador generado, lo activa en su sesión habitual de Hidden Clearances y confirma la conexión en Radar. El marcador toma únicamente los tokens de Hidden Clearances; no envía contraseña, sesión de Google, cookies de analítica ni perfil. No lleva credenciales en URLs ni registros. La transferencia usa una ventana de Radar, `postMessage` con origen/destino exactos, comprobación de ventana y un desafío de un solo flujo; la recepción vence a los dos minutos.
+En producción, los visitantes introducen únicamente su ZIP en la ficha de Home Depot. La sesión del propietario vive cifrada en el servidor, no se entrega a los visitantes y se renueva automáticamente antes de vencer. Las rutas de catálogo, feed, redirección y stock comparten la conexión. Las ofertas del feed conservan sku (Internet #) y las entradas restringidas locked: true se omiten.
 
-El servidor verifica la sesión en el emisor Supabase antes de conectarla. Guarda los dos tokens en cookies propias cifradas con AES-GCM y autenticadas, con HttpOnly, SameSite=Lax, Secure y prefijo __Host- en HTTPS. Si hace falta, divide la cookie en partes menores de 4 KB. La conexión pertenece al navegador del visitante, no se publica como una credencial compartida.
+### Configuración del alojamiento
 
-Configurar **HC_SESSION_SECRET** como secreto del servidor de al menos 32 bytes aleatorios codificados en base64url, tanto en Vercel como en desarrollo. Se usa exactamente una clave de 32 bytes; no lleva prefijo NEXT_PUBLIC_. Ya se generó una clave local en .env.local (ignorada por Git); el alojamiento necesita su propia clave configurada antes de desplegar. Cambiarla invalida las copias de sesión conectadas. No se requiere base de datos para este flujo, porque la cookie cifrada conserva la rotación entre solicitudes e instancias.
+- HC_SHARED_SESSION_MODE=true activa la sesión compartida.
+- HC_SESSION_SECRET: clave aleatoria de exactamente 32 bytes en base64url, como secreto de servidor. Producción y Preview usan claves distintas.
+- BLOB_READ_WRITE_TOKEN o BLOB_STORE_ID + VERCEL_OIDC_TOKEN: acceso al almacén **privado** de Vercel Blob. Se conectó clearance-session-vault al proyecto clearance. Los datos se separan por VERCEL_ENV: production, preview y development.
+- HC_ADMIN_SETUP_HASH: SHA-256 de la invitación privada inicial del propietario.
+- HC_ADMIN_SETUP_EXPIRES_AT: vencimiento de esa invitación en milisegundos Unix.
 
-Las rutas de catálogo, feed, redirección y stock renuevan la sesión cuando quedan dos minutos de vigencia, guardan el reemplazo mediante Set-Cookie incluso si falla una consulta posterior y reintentan una sola vez al recibir 401. Las solicitudes simultáneas comparten brevemente la renovación en una instancia; entre instancias se conserva el comportamiento de rotación/reutilización admitido por Supabase. Un error temporal conserva la copia para reintentar; una credencial revocada la elimina y requiere reconectar. La sesión original puede revocarse o tener límites de vigencia del proveedor; no se promete acceso permanente.
+Ninguna variable lleva prefijo NEXT_PUBLIC_. No se guardan secretos en código, Git ni URLs de consulta. La clave anónima de Supabase en lib/hc-public.ts es la publicada por Hidden Clearances y no concede una sesión.
 
-`GET /api/hc-session` devuelve solo estado y si la conexión está configurada. POST conecta, exige JSON y el mismo origen y rechaza acceso por HTTP fuera de loopback. DELETE olvida exclusivamente la copia de Radar; no cierra la sesión original. No se permite CORS para estas escrituras. Las respuestas usan private, no-store y nunca devuelven los tokens.
+### Conexión del propietario
 
-**HC_ACCESS_TOKEN** sigue siendo compatible como secreto opcional de servidor para la configuración anterior; por sí solo no permite renovación automática. Si no hay cookie conectada ni token válido, se usa el catálogo público. Las consultas de stock requieren sesión. La clave pública anónima del proyecto Supabase, publicada por Hidden Clearances, se conserva en lib/hc-public.ts y no concede una sesión de usuario.
+El propietario abre una invitación privada en /connect/hidden-clearances#setup=… . El fragmento se retira inmediatamente de la dirección y se canjea mediante POST del mismo origen. El hash se consume una sola vez en almacenamiento privado. Se emite una cookie administrativa firmada, HttpOnly, Secure en HTTPS y con prefijo __Host-, válida 30 días. Si se pierde o vence ese acceso, se necesita otra invitación generada desde la administración del alojamiento.
 
-Después del catálogo se agregan únicamente ofertas del feed kind: in_store con locked: false que no estén presentes por ID. Las entradas restringidas se omiten. Una conexión no concede Premium ni permite saltar las restricciones del origen. Se conservan las pausas y Retry-After del catálogo.
+Solo el propietario ve el marcador de conexión y puede conectar, reemplazar o desconectar el inventario. Los visitantes no reciben enlaces de conexión ni permisos de escritura. La API exige la cookie administrativa y el mismo origen para POST/DELETE.
 
-Validación: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/hc-renewal.test.mjs tests/hc-bridge.test.mjs tests/store-stock.test.mjs`.
+El marcador se guarda y activa en la sesión habitual de Hidden Clearances. Toma únicamente sus tokens de acceso y renovación; no copia la contraseña, la sesión de Google, el perfil ni cookies de analítica. Usa postMessage con destino y origen exactos, ventana comprobada y desafío aleatorio con vencimiento. El propietario confirma la conexión en Radar. El servidor verifica la identidad con el emisor antes de guardar una copia cifrada AES-GCM en Blob privado. La invitación administrativa no se incluye en el marcador.
 
-Referencias: [sesiones y rotación de Supabase](https://supabase.com/docs/guides/auth/sessions), [API de renovación](https://github.com/supabase/auth/blob/master/openapi.yaml).
+### Renovación y persistencia
+
+Las consultas leen el estado privado actualizado sin caché CDN. Al quedar dos minutos de vigencia se obtiene un lease mediante escritura condicional ETag antes de renovar. Así se coordinan instancias del servidor. El token reemplazado se guarda cifrado mediante compare-and-swap; una renovación antigua no puede sobrescribir una conexión nueva del propietario. Los fallos temporales conservan la credencial para reintentar. Una credencial revocada elimina la conexión y requiere intervención del propietario. Se respeta la duración y revocación del proveedor, sin prometer acceso permanente.
+
+Los visitantes reciben solo los resultados del inventario y metadatos de estado, nunca tokens ni cookies de Hidden Clearances. Una conexión no concede Premium ni permite saltar restricciones del origen. Las respuestas usan private, no-store. HC_ACCESS_TOKEN y la conexión por cookie siguen compatibles para entornos anteriores sin HC_SHARED_SESSION_MODE; producción usa exclusivamente el almacén compartido.
+
+### Validación
+
+Pruebas de sesión, rotación, concurrencia, reemplazo durante una renovación, acceso administrativo, transporte y enlaces: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/hc-renewal.test.mjs tests/hc-bridge.test.mjs tests/hc-shared.test.mjs tests/store-stock.test.mjs`. Compilación: `npm run build:vercel`. Las pruebas de tokens usan fixtures sintéticos y un emisor simulado. La comprobación de stock real requiere conectar primero la sesión real del propietario.
+
+Referencias: [sesiones de Supabase](https://supabase.com/docs/guides/auth/sessions), [Vercel Blob privado y escrituras condicionales](https://vercel.com/docs/vercel-blob).
 
 
 ## Staffspicks — Clearance Explorer
@@ -138,8 +152,8 @@ El detalle de las ofertas de Home Depot importadas del feed permite introducir u
 
 `GET /api/stock?sku=339011675&zip=33101` es un proxy de servidor hacia la ruta fija `/api/v1/homedepot/stock`. Valida los identificadores, usa `HC_ACCESS_TOKEN`, no devuelve credenciales, no sigue redirecciones y conserva `Retry-After`. El formulario respeta la espera ante 429, cancela consultas al cerrar la ficha y distingue errores de autenticación de inventario vacío. Las ofertas sin un número de producto válido conservan un enlace explícito a la fuente.
 
-Estado de autenticación: esta API requiere una sesión. Está integrada con la conexión y renovación automática descritas arriba. La conexión inicial requiere activar el marcador en la sesión de Hidden Clearances y confirmarla en Radar. No se han extraído las credenciales reales de la pestaña del agente; las pruebas de renovación usan sesiones sintéticas y un emisor simulado.
+Estado de autenticación: esta API requiere una sesión. Está integrada con la conexión y renovación automática descritas arriba. La conexión inicial es exclusiva del propietario: requiere activar el marcador en Hidden Clearances y confirmarla en Radar. No se han extraído las credenciales reales de la pestaña del agente; las pruebas de renovación usan sesiones sintéticas y un emisor simulado.
 
-Comprobación del 6 de noviembre de 2026: la página original autenticada devolvió siete sucursales con stock para el ZIP de prueba 33101; N Miami Beach usa `store=0251`. El formulario local y los estados HTTP 400/401 se verificaron; la consulta local con sesión vigente queda pendiente porque la credencial configurada está vencida. El proyecto antiguo de Sites devolvió `Sites project not found`. Se verificó que el repositorio actual publica https://clearance-two.vercel.app en Vercel. La publicación y configuración de la clave de cifrado quedan pendientes de conectar ese alojamiento.
+Comprobación del 6 de noviembre de 2026: la página original autenticada devolvió siete sucursales con stock para el ZIP de prueba 33101; N Miami Beach usa `store=0251`. El formulario local y los estados HTTP 400/401 se verificaron; la consulta local con sesión vigente queda pendiente porque la credencial configurada está vencida. El proyecto antiguo de Sites devolvió `Sites project not found`. Se verificó que el repositorio actual publica https://clearance-two.vercel.app en Vercel. El acceso a Vercel está autorizado y el almacenamiento privado y las claves de cifrado están configurados.
 
 Pruebas: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/store-stock.test.mjs`. Compilación: `npm run build:vercel`.
