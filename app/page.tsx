@@ -103,7 +103,7 @@ export default function Dashboard(){
  const isFiltered=!!(query||retailer||minDiscount||tag||maxPrice||status!=='all');
  return <div className="app-shell">
   <aside className="sidebar">
-   <a href="/" className="brand"><span className="brand-icon"><Radar size={25}/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
+   <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><img src="/favicon.svg" width="44" height="44" alt=""/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
    <div className="workspace-label">TU OBSERVATORIO DE OFERTAS</div>
    <nav aria-label="Navegación principal">
     <button className={section==='staffspicks'?'nav-item selected':'nav-item'} onClick={()=>setSection('staffspicks')}><Tag size={18}/> staffspicks</button>

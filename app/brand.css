@@ -1,0 +1,112 @@
+/* Clearance Radar — mustard yellow, charcoal and warm paper. */
+:root {
+  --brand-yellow: #c9a227;
+  --brand-black: #181914;
+  --brand-paper: #f6f5f0;
+}
+
+html body { background: var(--brand-paper); }
+html input[type='checkbox'] { accent-color: #806414; }
+.app-shell .sidebar {
+  background: var(--brand-black);
+  color: #f5f3e8;
+  border-color: #32342a;
+}
+.app-shell .brand { color: #faf8ec; gap: 12px; }
+.app-shell .brand-icon { width: 44px; height: 44px; background: transparent; border-radius: 12px; }
+.brand-icon img { display: block; width: 100%; height: 100%; }
+.app-shell .brand-bottom { color: var(--brand-yellow); }
+.app-shell .brand-dot { color: #f5f3e8; }
+.sidebar .workspace-label { color: #a4a794; letter-spacing: 1.2px; }
+.sidebar .nav-item { color: #c2c5b4; }
+.sidebar .nav-item:hover { background: #27291f; color: #faf8ec; }
+.sidebar .nav-item.selected { color: #181914; background: var(--brand-yellow); font-weight: 700; }
+.sidebar .nav-count { background: #1819141a; color: #181914; }
+.sidebar .nav-item:not(.selected) .nav-count { background: #303227; color: #c2c5b4; }
+.sidebar .sidebar-divider, .sidebar .profile { border-color: #34362b; }
+.sidebar .sidebar-divider { background: #34362b; }
+.sidebar .store-nav button { color: #c2c5b4; }
+.sidebar .store-nav small { color: #a4a794; }
+.sidebar .store-nav button:hover, .sidebar .store-selected { background: #2b2d21; }
+.sidebar .source-card { background: #23251b; border-color: #48452a; }
+.sidebar .source-card strong { color: #f5f3e8; }
+.sidebar .source-card p { color: #b1b49f; }
+.sidebar .source-icon, .sidebar .source-card a { color: var(--brand-yellow); }
+.sidebar .profile > span:first-child { background: var(--brand-yellow); color: var(--brand-black); }
+.sidebar .profile small { color: #a4a794; }
+.app-shell .avatar { background: #f1e6bc; color: #66500d; }
+.app-shell .topbar { background: #fdfcf8; }
+
+.app-shell .title-row {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 30px;
+  border: 1px solid #34362b;
+  border-radius: 14px;
+  background: var(--brand-black);
+  color: #faf8ec;
+  min-height: 170px;
+}
+.app-shell .title-row::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  width: 330px;
+  height: 330px;
+  right: -80px;
+  top: -80px;
+  border: 1px solid #c9a22724;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 49px, #c9a22718 50px 51px);
+}
+.title-row .eyebrow { color: #dfbc49; }
+.title-row .eyebrow > span { background: var(--brand-yellow); }
+.title-row .subtitle { color: #c2c5b4; line-height: 1.8; max-width: 660px; }
+.app-shell .primary, .connection-page .primary {
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+  box-shadow: 0 3px 8px #1819140d;
+  font-weight: 750;
+}
+.app-shell .primary:hover, .connection-page .primary:hover { background: #dab43b; }
+.app-shell .stat-card.accent { background: #f4e8b6; border-color: #dbc368; }
+.stat-card.accent .stat-label > span { background: #e9d78e; color: #66500d; }
+.stat-card.accent > strong { color: #473b13; }
+.stat-card.accent small { color: #70602e; }
+.app-shell .discount-badge { background: var(--brand-yellow); color: var(--brand-black); }
+.app-shell .discount-badge.expired { background: #eeede7; color: #676b5d; }
+.app-shell .deal-card:hover { border-color: #c9a227; box-shadow: 0 8px 24px #3a321012; }
+.app-shell .save.saved { background: #fff2c0; color: #66500d; border-color: #d6bc64; }
+.app-shell .deal-tag.hot { background: #f4e8b6; color: #66500d; }
+.app-shell .empty-state { border-color: #d8c78b; color: #747762; }
+.empty-state h2 { color: #424739; }
+.app-shell .deal-dialog { border-color: #d7d2bd; }
+.app-shell .deal-dialog::backdrop { background: #181914ad; }
+.app-shell .detail-image, .app-shell .detail-bottom { background: #f8f6ec; }
+.app-shell .coupon { background: #fff5d3; border-color: #c9a227; color: #66500d; }
+.app-shell .toast { background: var(--brand-black); color: #faf8ec; border: 1px solid #786523; }
+.app-shell .staffspicks > .filter-bar {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fdfcf8;
+}
+.staffspicks .results-toolbar label { display: flex; align-items: center; gap: 6px; }
+.staffspicks .footnote a { color: #806414; text-decoration: underline; }
+
+@media (max-width: 900px) {
+  .app-shell .brand { gap: 0; }
+  .app-shell .title-row { padding: 24px; }
+}
+@media (max-width: 650px) {
+  .app-shell .sidebar { border-bottom-color: #34362b; }
+  .app-shell .brand { gap: 8px; }
+  .app-shell .brand-icon { width: 31px; height: 31px; }
+  .app-shell .title-row { padding: 23px 20px; border-radius: 12px; }
+  .app-shell .title-row h1 { font-size: 25px; }
+  .app-shell .title-row::after { right: -190px; top: -50px; }
+  .app-shell .filter-bar { flex-wrap: wrap; }
+  .app-shell .staffspicks > .filter-bar { padding: 12px; }
+}
