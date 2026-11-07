@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {homeDepotStoreUrl, normalizeHomeDepotStock, validZip} from '../lib/store-stock.ts';
+import {homeDepotStoreUrl, normalizeHomeDepotStock, parseHomeDepotStockResponse, validZip} from '../lib/store-stock.ts';
 import {feedDeals} from '../lib/feed.ts';
 
 test('direct Home Depot links preserve leading store zeroes and reject injected destinations', () => {
@@ -45,4 +45,12 @@ test('unlocked in-store feed preserves the product number for stock checks', () 
   assert.equal(feedDeals([entry])[0].sku, '339011675');
   assert.equal(feedDeals([{...entry, locked: true}]).length, 0);
   assert.equal(feedDeals([{...entry, sku: null}])[0].sku, undefined);
+});
+
+test('stock endpoint accepts the direct response as well as the API data envelope', () => {
+  const stock = {item: {productUrl: 'https://www.homedepot.com/p/339011675'}, stores: [{storeId: '0251', storeName: 'N Miami Beach', inStock: true, quantity: 3, price: 20.4}]};
+  assert.equal(parseHomeDepotStockResponse(stock, '339011675', '33101').stores[0].storeId, '0251');
+  assert.equal(parseHomeDepotStockResponse({success: true, data: stock}, '339011675', '33101').stores[0].price, 20.4);
+  assert.throws(() => parseHomeDepotStockResponse({success: false, stores: []}, '339011675', '33101'));
+  assert.throws(() => parseHomeDepotStockResponse({error: 'upstream error'}, '339011675', '33101'));
 });

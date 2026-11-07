@@ -28,7 +28,14 @@ function numeric(value: unknown): number | null {
 }
 function text(value: unknown) { return typeof value === 'string' ? value.trim() : ''; }
 
-// The stock API uses data.stores, inStock, totalStock/quantity and distance (miles).
+// Hidden Clearances' own clearanceGet client accepts both raw stock objects and
+// {data: stock} envelopes. The stock route must preserve that same contract.
+export function parseHomeDepotStockResponse(body: unknown, sku: string, zip: string): StockResults {
+  if (!body || typeof body !== 'object' || ('success' in body && body.success === false)) throw Error('Consulta rechazada por la fuente.');
+  return normalizeHomeDepotStock('data' in body && body.data !== undefined ? body.data : body, sku, zip);
+}
+
+// Stock objects use stores, inStock, totalStock/quantity and distance (miles).
 export function normalizeHomeDepotStock(data: unknown, sku: string, zip: string): StockResults {
   if (!validHomeDepotSku(sku) || !validZip(zip)) throw Error('Producto o ZIP inválido.');
   if (!data || typeof data !== 'object' || !('stores' in data) || !Array.isArray(data.stores)) {

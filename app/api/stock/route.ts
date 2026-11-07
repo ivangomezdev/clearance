@@ -1,5 +1,5 @@
 import {hcSessionForRequest} from '../../../lib/hc-session-service';
-import {normalizeHomeDepotStock, validHomeDepotSku, validZip} from '../../../lib/store-stock';
+import {parseHomeDepotStockResponse, validHomeDepotSku, validZip} from '../../../lib/store-stock';
 
 const headers = {'Cache-Control': 'private, no-store'};
 export async function GET(request: Request) {
@@ -26,8 +26,7 @@ export async function GET(request: Request) {
       return session.apply(Response.json({error}, {status: response.status, headers: {...headers, ...(retry ? {'Retry-After': retry} : {})}}));
     }
     const body = await response.json();
-    if (!body || typeof body !== 'object' || !('data' in body) || ('success' in body && body.success === false)) throw Error('Consulta rechazada por la fuente.');
-    return session.apply(Response.json({data: normalizeHomeDepotStock(body.data, sku, zip)}, {headers}));
+    return session.apply(Response.json({data: parseHomeDepotStockResponse(body, sku, zip)}, {headers}));
   } catch {
     return session.apply(Response.json({error: 'La consulta tardó demasiado o devolvió datos no válidos. Vuelve a intentar.'}, {status: 502, headers}));
   }
