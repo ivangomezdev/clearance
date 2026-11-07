@@ -1,4 +1,4 @@
-import {authorizeHcAdmin, isHcAdmin} from '../../../lib/hc-admin';
+import {authorizeHcAdmin, HcAdminSetupError, isHcAdmin} from '../../../lib/hc-admin';
 import {allowedHcConnectionOrigin} from '../../../lib/hc-connection-origin';
 
 const headers = {'Cache-Control': 'private, no-store'};
@@ -12,5 +12,11 @@ export async function POST(request: Request) {
     const body = JSON.parse(text);
     if (typeof body.setup !== 'string') throw Error();
     return await authorizeHcAdmin(request, body.setup);
-  } catch {return Response.json({error: 'El enlace privado venció o ya se utilizó. Solicita un enlace de administración nuevo.'}, {status: 401, headers});}
+  } catch (error) {
+    const known = error instanceof HcAdminSetupError;
+    const code = known ? error.code : 'INVALID_INPUT';
+    // Log only a reason code; never the invitation, request body or session tokens.
+    console.warn('HC owner setup rejected', {code});
+    return Response.json({error: known ? error.message : 'No se pudo leer el enlace privado. Copia su dirección completa.', code}, {status: known ? error.status : 400, headers});
+  }
 }

@@ -98,3 +98,16 @@ test('owner setup link is one-use and produces a signed private cookie, not a pu
   await assert.rejects(authorizeHcAdmin(request, setup, settings, store, now));
   await assert.rejects(authorizeHcAdmin(request, setup, settings, vault(), now + 61000));
 });
+
+test('setup failures distinguish expired links, replay and storage faults without leaking the invitation', async () => {
+  const setup = Buffer.alloc(32, 4).toString('base64url');
+  const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(setup))).toString('hex');
+  const settings = {...config, HC_ADMIN_SETUP_HASH: hash, HC_ADMIN_SETUP_EXPIRES_AT: String(now + 60000)};
+  const request = new Request('https://radar.example/api/hc-admin');
+  const isCode = code => error => error.code === code && !error.message.includes(setup);
+  await assert.rejects(authorizeHcAdmin(request, setup, settings, vault(), now + 61000), isCode('EXPIRED_LINK'));
+  await assert.rejects(authorizeHcAdmin(request, setup, config, vault(), now), isCode('NOT_CONFIGURED'));
+  await assert.rejects(authorizeHcAdmin(request, setup, settings, {async read() {throw Error('synthetic storage fault');}}, now), isCode('STORAGE_UNAVAILABLE'));
+  const used = vault({version: 1, usedSetupHash: hash});
+  await assert.rejects(authorizeHcAdmin(request, setup, settings, used, now), isCode('USED_LINK'));
+});

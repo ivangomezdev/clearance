@@ -1,4 +1,4 @@
-import {BlobError, BlobPreconditionFailedError, get, put} from '@vercel/blob';
+import {BlobError, BlobNotFoundError, BlobPreconditionFailedError, get, head, put} from '@vercel/blob';
 import type {HcConfig} from './hc-session-service.ts';
 
 export type VaultRecord = {
@@ -21,12 +21,18 @@ export function blobSessionVault(config: HcConfig = process.env): SessionVault {
   const options = {token: config.BLOB_READ_WRITE_TOKEN, storeId: config.BLOB_STORE_ID, abortSignal: AbortSignal.timeout(10000)};
   return {
     async read() {
+      let metadata;
+      try {metadata = await head(path, {...options, abortSignal: AbortSignal.timeout(10000)});}
+      catch (e) {if (e instanceof BlobNotFoundError) return {record: {version: 1}, etag: null}; throw e;}
       const blob = await get(path, {...options, abortSignal: AbortSignal.timeout(10000), access: 'private', useCache: false});
       if (!blob) return {record: {version: 1}, etag: null};
       if (blob.statusCode !== 200 || blob.blob.size > 24000) throw Error('Estado de sesión no válido.');
       const record = await new Response(blob.stream).json() as VaultRecord;
       if (record.version !== 1 || (record.sealed !== undefined && typeof record.sealed !== 'string')) throw Error('Estado de sesión no válido.');
-      return {record, etag: blob.blob.etag};
+      // Use the control-plane ETag for conditional writes. A downloaded body's
+      // ETag may describe a compressed transfer representation instead.
+      // Read metadata before content: concurrent changes then fail the CAS.
+      return {record, etag: metadata.etag};
     },
     async write(expected, record) {
       try {

@@ -110,7 +110,7 @@ Ninguna variable lleva prefijo NEXT_PUBLIC_. No se guardan secretos en código, 
 
 ### Conexión del propietario
 
-El propietario abre una invitación privada en /connect/hidden-clearances#setup=… . El fragmento se retira inmediatamente de la dirección y se canjea mediante POST del mismo origen. El hash se consume una sola vez en almacenamiento privado. Se emite una cookie administrativa firmada, HttpOnly, Secure en HTTPS y con prefijo __Host-, válida 30 días. Si se pierde o vence ese acceso, se necesita otra invitación generada desde la administración del alojamiento.
+El propietario abre una invitación privada en /connect/hidden-clearances#setup=… . El fragmento se retira inmediatamente de la dirección. Abrir la página no consume la invitación: el propietario pulsa «Autorizar este navegador» para canjearla mediante POST del mismo origen. Los enlaces nuevos en la misma pestaña se procesan de nuevo y eliminan errores anteriores. El hash se consume una sola vez en almacenamiento privado. Se emite una cookie administrativa firmada, HttpOnly, Secure en HTTPS y con prefijo __Host-, válida 30 días. Si se pierde o vence ese acceso, se necesita otra invitación generada desde la administración del alojamiento.
 
 Solo el propietario ve el marcador de conexión y puede conectar, reemplazar o desconectar el inventario. Los visitantes no reciben enlaces de conexión ni permisos de escritura. La API exige la cookie administrativa y el mismo origen para POST/DELETE.
 
@@ -118,13 +118,13 @@ El marcador se guarda y activa en la sesión habitual de Hidden Clearances. Toma
 
 ### Renovación y persistencia
 
-Las consultas leen el estado privado actualizado sin caché CDN. Al quedar dos minutos de vigencia se obtiene un lease mediante escritura condicional ETag antes de renovar. Así se coordinan instancias del servidor. El token reemplazado se guarda cifrado mediante compare-and-swap; una renovación antigua no puede sobrescribir una conexión nueva del propietario. Los fallos temporales conservan la credencial para reintentar. Una credencial revocada elimina la conexión y requiere intervención del propietario. Se respeta la duración y revocación del proveedor, sin prometer acceso permanente.
+Las consultas leen el estado privado actualizado sin caché CDN. Las escrituras condicionales usan el ETag de los metadatos de Blob, leído antes del contenido, para evitar diferencias debidas a la representación comprimida de la descarga. Al quedar dos minutos de vigencia se obtiene un lease mediante escritura condicional ETag antes de renovar. Así se coordinan instancias del servidor. El token reemplazado se guarda cifrado mediante compare-and-swap; una renovación antigua no puede sobrescribir una conexión nueva del propietario. Los fallos temporales conservan la credencial para reintentar. Una credencial revocada elimina la conexión y requiere intervención del propietario. Se respeta la duración y revocación del proveedor, sin prometer acceso permanente.
 
 Los visitantes reciben solo los resultados del inventario y metadatos de estado, nunca tokens ni cookies de Hidden Clearances. Una conexión no concede Premium ni permite saltar restricciones del origen. Las respuestas usan private, no-store. HC_ACCESS_TOKEN y la conexión por cookie siguen compatibles para entornos anteriores sin HC_SHARED_SESSION_MODE; producción usa exclusivamente el almacén compartido.
 
 ### Validación
 
-Pruebas de sesión, rotación, concurrencia, reemplazo durante una renovación, acceso administrativo, transporte y enlaces: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/hc-renewal.test.mjs tests/hc-bridge.test.mjs tests/hc-shared.test.mjs tests/store-stock.test.mjs`. Compilación: `npm run build:vercel`. Las pruebas de tokens usan fixtures sintéticos y un emisor simulado. La comprobación de stock real requiere conectar primero la sesión real del propietario.
+Pruebas de sesión, rotación, concurrencia, reemplazo durante una renovación, acceso administrativo, transporte y enlaces: `node --experimental-strip-types --test tests/deals.test.mjs tests/hc-session.test.mjs tests/hc-renewal.test.mjs tests/hc-bridge.test.mjs tests/hc-shared.test.mjs tests/store-stock.test.mjs`. Compilación: `npm run build:vercel`. Las pruebas de tokens usan fixtures sintéticos y un emisor simulado. Se distinguen enlaces inválidos, vencidos y usados de los fallos de almacenamiento; los registros guardan únicamente códigos de causa, nunca invitaciones o tokens. La comprobación de stock real requiere conectar primero la sesión real del propietario.
 
 Referencias: [sesiones de Supabase](https://supabase.com/docs/guides/auth/sessions), [Vercel Blob privado y escrituras condicionales](https://vercel.com/docs/vercel-blob).
 

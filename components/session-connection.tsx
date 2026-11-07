@@ -3,6 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {ArrowLeft, CheckCircle2, Link2, RefreshCw} from 'lucide-react';
 import {hiddenClearancesBookmark} from '../lib/hc-session-bridge';
+import {createHcOwnerClient} from '../lib/hc-owner-client';
 import type {SessionInfo} from '../lib/hc-session';
 
 const source = 'https://www.hiddenclearances.com';
@@ -10,32 +11,42 @@ type Pending = {accessToken: string; refreshToken: string};
 export function SessionConnection() {
   const [status, setStatus] = useState<SessionInfo | null>(null), [configured, setConfigured] = useState<boolean | null>(null);
   const [canManage, setCanManage] = useState<boolean | null>(null);
+  const [hasSetup, setHasSetup] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null), [busy, setBusy] = useState(false);
   const [error, setError] = useState(''), [hint, setHint] = useState('');
   const bookmark = useRef<HTMLAnchorElement>(null), marker = useRef(''), pairing = useRef<string | null>(null);
-  const setupAttempt = useRef<Promise<void> | null>(null);
+  const ownerClient = useRef<ReturnType<typeof createHcOwnerClient> | null>(null);
+  const pendingSetup = useRef<string | null>(null);
   useEffect(() => {if (marker.current) bookmark.current?.setAttribute('href', marker.current);}, [canManage, pending, status]);
   useEffect(() => {
     marker.current = hiddenClearancesBookmark(location.origin);
     // React blocks javascript URLs in JSX; this fixed, locally generated bookmark
     // is intentionally draggable and never executed by this page.
     bookmark.current?.setAttribute('href', marker.current);
-    const c = new AbortController();
+    if (!ownerClient.current) ownerClient.current = createHcOwnerClient();
     const hash = new URLSearchParams(location.hash.slice(1));
-    const setup = hash.get('setup');
-    // Do not abort or duplicate a one-time setup exchange during React's effect replay.
-    if (setup && !setupAttempt.current) setupAttempt.current = fetch('/api/hc-admin', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({setup})}).then(async r => {
-      if (!r.ok) throw Error('El enlace privado venció o ya se utilizó. Solicita uno nuevo.');
-    });
-    (async () => {
-      if (setupAttempt.current) await setupAttempt.current;
-      const r = await fetch('/api/hc-session', {signal: c.signal});
-      const body = await r.json() as {session: SessionInfo; configured: boolean; canManage: boolean};
-      if (!c.signal.aborted) {setStatus(body.session); setConfigured(body.configured); setCanManage(body.canManage);}
-    })().catch(e => {if (!c.signal.aborted) {setError(e instanceof Error ? e.message : 'No se pudo comprobar la conexión.'); setCanManage(false);}});
+    let accessRequest: AbortController | undefined, generation = 0;
+    async function checkAccess(setup?: string) {
+      if (setup) {pendingSetup.current = setup; setHasSetup(true);}
+      accessRequest?.abort();
+      const controller = new AbortController(), current = ++generation;
+      accessRequest = controller; setError(''); setCanManage(null);
+      try {
+        const body = await ownerClient.current!.inspect(controller.signal);
+        if (!controller.signal.aborted && current === generation) {setStatus(body.session); setConfigured(body.configured); setCanManage(body.canManage); setError(body.setupError || '');}
+      } catch (e) {if (!controller.signal.aborted && current === generation) {setError(e instanceof Error ? e.message : 'No se pudo comprobar la conexión.'); setCanManage(false);}}
+    }
+    function checkNewInvitation() {
+      const setup = new URLSearchParams(location.hash.slice(1)).get('setup');
+      if (!setup) return;
+      history.replaceState(null, '', location.pathname);
+      setPending(null); void checkAccess(setup);
+    }
+    void checkAccess(hash.get('setup') || undefined);
+    window.addEventListener('hashchange', checkNewInvitation);
     const challenge = pairing.current || hash.get('pair');
     pairing.current = challenge;
-    if (challenge || setup) history.replaceState(null, '', location.pathname);
+    if (challenge || hash.get('setup')) history.replaceState(null, '', location.pathname);
     let timer: ReturnType<typeof setInterval> | undefined, timeout: ReturnType<typeof setTimeout> | undefined;
     function receive(event: MessageEvent) {
       if (!challenge || !/^[a-f0-9]{32}$/.test(challenge) || event.origin !== source || event.source !== window.opener || event.data?.type !== 'radar-hc-session' || event.data?.challenge !== challenge) return;
@@ -49,8 +60,18 @@ export function SessionConnection() {
       ready(); timer = setInterval(ready, 500);
       timeout = setTimeout(() => {clearInterval(timer); window.removeEventListener('message', receive); setHint('La conexión inicial venció. Vuelve a activar el marcador en Hidden Clearances.');}, 120000);
     }
-    return () => {c.abort(); clearInterval(timer); clearTimeout(timeout); window.removeEventListener('message', receive);};
+    return () => {accessRequest?.abort(); clearInterval(timer); clearTimeout(timeout); window.removeEventListener('message', receive); window.removeEventListener('hashchange', checkNewInvitation);};
   }, []);
+  async function authorizeOwner() {
+    if (!pendingSetup.current || busy) return;
+    setBusy(true); setError('');
+    try {
+      const body = await ownerClient.current!.check(pendingSetup.current);
+      setStatus(body.session); setConfigured(body.configured); setCanManage(body.canManage);
+      if (!body.canManage) throw Error(body.setupError || 'La autorización no se conservó en este navegador. Vuelve a abrir el enlace completo.');
+      pendingSetup.current = null; setHasSetup(false);
+    } catch (e) {setError(e instanceof Error ? e.message : 'No se pudo autorizar este navegador.');} finally {setBusy(false);}
+  }
   async function connect() {
     if (!pending || busy || !canManage) return;
     setBusy(true); setError('');
@@ -72,7 +93,7 @@ export function SessionConnection() {
     <div className="connection-card"><span className="connection-symbol"><Link2 size={26}/></span>
       <h1>Conexión de inventario</h1>
       <p>Administración del propietario. Los visitantes solo introducen su ZIP para consultar tiendas; la conexión se mantiene en el servidor.</p>
-      {canManage === null ? <p role="status">Comprobando acceso…</p> : !canManage ? <p className="connection-hint">Esta sección requiere el enlace privado del propietario. Para buscar tiendas, vuelve a las ofertas e introduce tu ZIP.</p>
+      {canManage === null ? <p role="status">Comprobando acceso…</p> : !canManage ? hasSetup ? <div className="connection-ready"><h2>Autoriza tu navegador</h2><p>Este enlace privado habilita la administración del inventario. Confirma en el mismo navegador donde usarás Hidden Clearances.</p><button className="primary" disabled={busy} onClick={authorizeOwner}>{busy ? <><RefreshCw size={16} className="spin"/> Autorizando…</> : 'Autorizar este navegador'}</button></div> : <p className="connection-hint">Esta sección requiere el enlace privado del propietario. Para buscar tiendas, vuelve a las ofertas e introduce tu ZIP.</p>
       : status?.status === 'active' && status.renewable && !pending ? <div className="connection-success"><CheckCircle2 size={21}/><strong>Inventario conectado · renovación automática</strong><a className="primary" href="/">Buscar ofertas y tiendas</a><button disabled={busy} onClick={disconnect}>Desconectar el inventario</button></div>
       : pending ? <div className="connection-ready"><h2>Tu sesión está lista</h2><p>Se conectará la sesión de Hidden Clearances que acabas de seleccionar. Se guardará cifrada en el servidor para que los visitantes puedan consultar el inventario.</p><button className="primary" disabled={busy || configured !== true} onClick={connect}>{busy ? <><RefreshCw size={16} className="spin"/> Conectando…</> : 'Conectar esta sesión'}</button></div>
       : <ol className="connection-steps"><li><strong>Guarda este marcador</strong><p>Arrastra el botón a la barra de marcadores de tu navegador.</p><a ref={bookmark} draggable className="primary" onClick={e => {e.preventDefault(); setHint('Arrastra este botón a la barra de marcadores; se activa después desde Hidden Clearances.');}}>Conectar con Radar</a><button className="connection-copy" onClick={async () => {try {await navigator.clipboard.writeText(marker.current); setHint('Marcador copiado. Guárdalo como la dirección de un nuevo marcador.');} catch {setError('No se pudo copiar. Arrastra el botón a la barra de marcadores.');}}}>Copiar marcador</button></li>

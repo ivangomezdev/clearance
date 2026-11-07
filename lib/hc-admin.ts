@@ -2,6 +2,11 @@ import {mutateVault, type SessionVault, blobSessionVault} from './hc-session-vau
 import type {HcConfig} from './hc-session-service.ts';
 
 const encoder = new TextEncoder(), lifetime = 30 * 24 * 60 * 60;
+export class HcAdminSetupError extends Error {
+  readonly code: 'INVALID_LINK' | 'EXPIRED_LINK' | 'USED_LINK' | 'NOT_CONFIGURED' | 'STORAGE_UNAVAILABLE';
+  readonly status: number;
+  constructor(code: HcAdminSetupError['code'], message: string, status = 401) {super(message); this.code = code; this.status = status;}
+}
 function name(request: Request) {return new URL(request.url).protocol === 'https:' ? '__Host-radar-owner' : 'radar-owner';}
 function cookie(request: Request) {const prefix = name(request) + '='; return (request.headers.get('cookie') || '').split(';').map(s => s.trim()).find(s => s.startsWith(prefix))?.slice(prefix.length);}
 async function key(config: HcConfig) {
@@ -17,15 +22,20 @@ export async function isHcAdmin(request: Request, config: HcConfig = process.env
   } catch {return false;}
 }
 export async function authorizeHcAdmin(request: Request, setup: string, config: HcConfig = process.env, vault?: SessionVault, now = Date.now()): Promise<Response> {
-  if (!/^[\w-]{43}$/.test(setup) || Number(config.HC_ADMIN_SETUP_EXPIRES_AT || 0) < now) throw Error('El enlace de administración venció.');
+  if (!/^[\w-]{43}$/.test(setup)) throw new HcAdminSetupError('INVALID_LINK', 'El enlace privado no es válido. Copia la dirección completa del enlace nuevo.');
+  if (!/^[a-f0-9]{64}$/.test(config.HC_ADMIN_SETUP_HASH || '') || !Number.isFinite(Number(config.HC_ADMIN_SETUP_EXPIRES_AT)) || !config.HC_ADMIN_SETUP_EXPIRES_AT) throw new HcAdminSetupError('NOT_CONFIGURED', 'La administración aún no está configurada en el servidor.', 503);
+  if (Number(config.HC_ADMIN_SETUP_EXPIRES_AT) < now) throw new HcAdminSetupError('EXPIRED_LINK', 'El enlace privado venció. Solicita uno nuevo.');
   const hash = Buffer.from(await crypto.subtle.digest('SHA-256', encoder.encode(setup))).toString('hex');
   const expected = config.HC_ADMIN_SETUP_HASH || '';
   let difference = expected.length ^ hash.length;
   for (let i = 0; i < hash.length; i++) difference |= hash.charCodeAt(i) ^ (expected.charCodeAt(i) || 0);
-  if (difference) throw Error('El enlace de administración no es válido.');
-  const signingKey = await key(config);
-  const used = await mutateVault(vault || blobSessionVault(config), current => current.usedSetupHash === hash ? null : {...current, usedSetupHash: hash});
-  if (!used) throw Error('El enlace de administración ya se utilizó.');
+  if (difference) throw new HcAdminSetupError('INVALID_LINK', 'Este enlace privado fue reemplazado. Abre el enlace más reciente.');
+  let signingKey: CryptoKey;
+  try {signingKey = await key(config);} catch {throw new HcAdminSetupError('NOT_CONFIGURED', 'La administración aún no está configurada en el servidor.', 503);}
+  let used: boolean;
+  try {used = await mutateVault(vault || blobSessionVault(config), current => current.usedSetupHash === hash ? null : {...current, usedSetupHash: hash});}
+  catch {throw new HcAdminSetupError('STORAGE_UNAVAILABLE', 'No se pudo guardar el acceso en el servidor. Espera un momento y vuelve a abrir este enlace.', 503);}
+  if (!used) throw new HcAdminSetupError('USED_LINK', 'El enlace ya se utilizó en otro navegador. Solicita uno nuevo para este navegador.');
   const expires = String(now + lifetime * 1000), nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(18))).toString('base64url');
   const signature = Buffer.from(await crypto.subtle.sign('HMAC', signingKey, encoder.encode(`radar-owner:v1:${expires}.${nonce}`))).toString('base64url');
   const response = Response.json({authorized: true}, {headers: {'Cache-Control': 'private, no-store'}});
