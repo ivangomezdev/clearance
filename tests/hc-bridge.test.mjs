@@ -21,7 +21,7 @@ test('bookmark transfers only HC tokens after checking the popup, origin and cha
   const popup = {postMessage: (data, origin) => sent.push({data, origin})};
   const fakeWindow = {open: url => {popupUrl = url; return popup;}, addEventListener: (_type, fn) => {listener = fn;}, removeEventListener() {}};
   vm.runInNewContext(script, {location: {origin: 'https://www.hiddenclearances.com'}, document: {cookie: `_ga=analytics; ${name}.1=${raw.slice(middle)}; ${name}.0=${raw.slice(0, middle)}`}, window: fakeWindow, crypto, TextDecoder, Uint8Array, atob, setTimeout: () => 1, clearTimeout() {}, alert() {throw Error('Unexpected alert');}});
-  assert.ok(popupUrl.startsWith('https://radar.example/connect/hidden-clearances#pair='));
+  assert.ok(popupUrl.startsWith('https://radar.example/settings/inventory#pair='));
   const challenge = popupUrl.split('pair=')[1];
   assert.equal(sent.length, 0);
   listener({origin: 'https://evil.example', source: popup, data: {type: 'radar-hc-ready', challenge}});

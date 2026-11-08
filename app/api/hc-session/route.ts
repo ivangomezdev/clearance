@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const input = JSON.parse(text);
     if (process.env.HC_SHARED_SESSION_MODE === 'true') return Response.json(await connectSharedHcSession(input), {headers});
     return await connectHcSession(request, input);
-  } catch { return Response.json({error: 'No se pudo conectar la sesión. Vuelve a conectarla desde Hidden Clearances.'}, {status: 401, headers}); }
+  } catch { return Response.json({error: 'No se pudo conectar la sesión. Vuelve a conectarla desde la cuenta de inventario.'}, {status: 401, headers}); }
 }
 export async function DELETE(request: Request) {
   if (!allowedHcConnectionOrigin(request)) return Response.json({error: 'Origen no permitido.'}, {status: 403, headers});
@@ -29,6 +29,6 @@ export async function DELETE(request: Request) {
     try {await disconnectSharedHcSession(); return Response.json({disconnected: true}, {headers});}
     catch {return Response.json({error: 'No se pudo guardar la desconexión.'}, {status: 502, headers});}
   }
-  // Forget only the Radar copy; do not sign the user out of Hidden Clearances.
+  // Forget only the Radar copy; do not sign the user out of la cuenta de inventario.
   return clearHcSession(request, Response.json({disconnected: true}, {headers}));
 }

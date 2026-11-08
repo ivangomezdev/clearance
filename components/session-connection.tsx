@@ -58,7 +58,7 @@ export function SessionConnection() {
     if (challenge && /^[a-f0-9]{32}$/.test(challenge) && window.opener) {
       const ready = () => window.opener?.postMessage({type: 'radar-hc-ready', challenge}, source);
       ready(); timer = setInterval(ready, 500);
-      timeout = setTimeout(() => {clearInterval(timer); window.removeEventListener('message', receive); setHint('La conexión inicial venció. Vuelve a activar el marcador en Hidden Clearances.');}, 120000);
+      timeout = setTimeout(() => {clearInterval(timer); window.removeEventListener('message', receive); setHint('La conexión inicial venció. Vuelve a activar el marcador en la cuenta de inventario.');}, 120000);
     }
     return () => {accessRequest?.abort(); clearInterval(timer); clearTimeout(timeout); window.removeEventListener('message', receive); window.removeEventListener('hashchange', checkNewInvitation);};
   }, []);
@@ -85,7 +85,7 @@ export function SessionConnection() {
   }
   async function disconnect() {
     if (busy) return; setBusy(true); setError('');
-    try {const r = await fetch('/api/hc-session', {method: 'DELETE'}); if (!r.ok) throw Error(); setStatus({status: 'public', shared: true}); setHint('Se desconectó el inventario de Radar. Tu sesión en Hidden Clearances sigue abierta.');}
+    try {const r = await fetch('/api/hc-session', {method: 'DELETE'}); if (!r.ok) throw Error(); setStatus({status: 'public', shared: true}); setHint('Se desconectó el inventario de Radar. Tu sesión en la cuenta de inventario sigue abierta.');}
     catch {setError('No se pudo desconectar. Vuelve a intentar.');} finally {setBusy(false);}
   }
   return <main className="connection-page">
@@ -93,15 +93,15 @@ export function SessionConnection() {
     <div className="connection-card"><span className="connection-symbol"><Link2 size={26}/></span>
       <h1>Conexión de inventario</h1>
       <p>Administración del propietario. Los visitantes solo introducen su ZIP para consultar tiendas; la conexión se mantiene en el servidor.</p>
-      {canManage === null ? <p role="status">Comprobando acceso…</p> : !canManage ? hasSetup ? <div className="connection-ready"><h2>Autoriza tu navegador</h2><p>Este enlace privado habilita la administración del inventario. Confirma en el mismo navegador donde usarás Hidden Clearances.</p><button className="primary" disabled={busy} onClick={authorizeOwner}>{busy ? <><RefreshCw size={16} className="spin"/> Autorizando…</> : 'Autorizar este navegador'}</button></div> : <p className="connection-hint">Esta sección requiere el enlace privado del propietario. Para buscar tiendas, vuelve a las ofertas e introduce tu ZIP.</p>
+      {canManage === null ? <p role="status">Comprobando acceso…</p> : !canManage ? hasSetup ? <div className="connection-ready"><h2>Autoriza tu navegador</h2><p>Este enlace privado habilita la administración del inventario. Confirma en el mismo navegador donde usarás la cuenta de inventario.</p><button className="primary" disabled={busy} onClick={authorizeOwner}>{busy ? <><RefreshCw size={16} className="spin"/> Autorizando…</> : 'Autorizar este navegador'}</button></div> : <p className="connection-hint">Esta sección requiere el enlace privado del propietario. Para buscar tiendas, vuelve a las ofertas e introduce tu ZIP.</p>
       : status?.status === 'active' && status.renewable && !pending ? <div className="connection-success"><CheckCircle2 size={21}/><strong>Inventario conectado · renovación automática</strong><a className="primary" href="/">Buscar ofertas y tiendas</a><button disabled={busy} onClick={disconnect}>Desconectar el inventario</button></div>
-      : pending ? <div className="connection-ready"><h2>Tu sesión está lista</h2><p>Se conectará la sesión de Hidden Clearances que acabas de seleccionar. Se guardará cifrada en el servidor para que los visitantes puedan consultar el inventario.</p><button className="primary" disabled={busy || configured !== true} onClick={connect}>{busy ? <><RefreshCw size={16} className="spin"/> Conectando…</> : 'Conectar esta sesión'}</button></div>
-      : <ol className="connection-steps"><li><strong>Guarda este marcador</strong><p>Arrastra el botón a la barra de marcadores de tu navegador.</p><a ref={bookmark} draggable className="primary" onClick={e => {e.preventDefault(); setHint('Arrastra este botón a la barra de marcadores; se activa después desde Hidden Clearances.');}}>Conectar con Radar</a><button className="connection-copy" onClick={async () => {try {await navigator.clipboard.writeText(marker.current); setHint('Marcador copiado. Guárdalo como la dirección de un nuevo marcador.');} catch {setError('No se pudo copiar. Arrastra el botón a la barra de marcadores.');}}}>Copiar marcador</button></li>
-        <li><strong>Abre tu sesión habitual</strong><p><a href="https://www.hiddenclearances.com/verified-deals" target="_blank" rel="noopener noreferrer">Abre Hidden Clearances</a> en ese navegador e inicia sesión si hace falta.</p></li>
-        <li><strong>Activa el marcador</strong><p>Desde Hidden Clearances, pulsa «Conectar con Radar». Se abrirá aquí la confirmación de conexión.</p></li></ol>}
+      : pending ? <div className="connection-ready"><h2>Tu sesión está lista</h2><p>Se conectará la sesión de la cuenta de inventario que acabas de seleccionar. Se guardará cifrada en el servidor para que los visitantes puedan consultar el inventario.</p><button className="primary" disabled={busy || configured !== true} onClick={connect}>{busy ? <><RefreshCw size={16} className="spin"/> Conectando…</> : 'Conectar esta sesión'}</button></div>
+      : <ol className="connection-steps"><li><strong>Guarda este marcador</strong><p>Arrastra el botón a la barra de marcadores de tu navegador.</p><a ref={bookmark} draggable className="primary" onClick={e => {e.preventDefault(); setHint('Arrastra este botón a la barra de marcadores; se activa después desde la cuenta de inventario.');}}>Conectar con Radar</a><button className="connection-copy" onClick={async () => {try {await navigator.clipboard.writeText(marker.current); setHint('Marcador copiado. Guárdalo como la dirección de un nuevo marcador.');} catch {setError('No se pudo copiar. Arrastra el botón a la barra de marcadores.');}}}>Copiar marcador</button></li>
+        <li><strong>Abre tu sesión habitual</strong><p><a href="https://www.hiddenclearances.com/verified-deals" target="_blank" rel="noopener noreferrer">Abre la cuenta de inventario</a> en ese navegador e inicia sesión si hace falta.</p></li>
+        <li><strong>Activa el marcador</strong><p>Desde la cuenta de inventario, pulsa «Conectar con Radar». Se abrirá aquí la confirmación de conexión.</p></li></ol>}
       {canManage && configured === false && <p className="redirect-warning" role="alert">Falta configurar la conexión de sesión en el alojamiento. Todavía no envíes tu sesión.</p>}
       {hint && <p role="status" className="connection-hint">{hint}</p>}{error && <p role="alert" className="redirect-warning">{error}</p>}
-      {canManage && <p className="connection-note">No se copia tu contraseña ni la sesión de Google. Los tokens de Hidden Clearances se envían únicamente a este sitio y se guardan cifrados en almacenamiento privado. Si revocas la sesión en el origen, tendrás que conectarla de nuevo.</p>}
+      {canManage && <p className="connection-note">No se copia tu contraseña ni la sesión de Google. Los tokens de la cuenta de inventario se envían únicamente a este sitio y se guardan cifrados en almacenamiento privado. Si revocas la sesión en el origen, tendrás que conectarla de nuevo.</p>}
     </div>
   </main>;
 }

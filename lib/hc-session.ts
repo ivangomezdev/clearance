@@ -10,6 +10,6 @@ export function accessTokenFromCookie(raw:string):string{
  const pairs=raw.trim().replace(/^cookie\s*:\s*/i,'').split(';').map(s=>{const i=s.indexOf('=');return [s.slice(0,i).trim(),s.slice(i+1).trim()] as const;});
  const single=pairs.find(([k])=>k===COOKIE_NAME)?.[1];
  const chunks=pairs.filter(([k])=>k.startsWith(COOKIE_NAME+'.')).map(([k,v])=>({index:Number(k.slice(COOKIE_NAME.length+1)),value:v})).sort((a,b)=>a.index-b.index);
- if(!single&&(!chunks.length||chunks.some((c,i)=>c.index!==i)))throw Error('La cookie de Hidden Clearances está incompleta.');
- try{const value=decodeURIComponent(single||chunks.map(c=>c.value).join(''));const session=JSON.parse(value.startsWith('base64-')?Buffer.from(value.slice(7),'base64url').toString():value);if(typeof session.access_token!=='string'||sessionAccess(session.access_token).info.status==='invalid')throw Error();return session.access_token;}catch{throw Error('No se pudo interpretar la sesión de Hidden Clearances.');}
+ if(!single&&(!chunks.length||chunks.some((c,i)=>c.index!==i)))throw Error('La cookie de la cuenta de inventario está incompleta.');
+ try{const value=decodeURIComponent(single||chunks.map(c=>c.value).join(''));const session=JSON.parse(value.startsWith('base64-')?Buffer.from(value.slice(7),'base64url').toString():value);if(typeof session.access_token!=='string'||sessionAccess(session.access_token).info.status==='invalid')throw Error();return session.access_token;}catch{throw Error('No se pudo interpretar la sesión de la cuenta de inventario.');}
 }

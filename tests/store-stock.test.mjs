@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {homeDepotStoreUrl, normalizeHomeDepotStock, parseHomeDepotStockResponse, validZip} from '../lib/store-stock.ts';
 import {feedDeals} from '../lib/feed.ts';
+import {dealSku} from '../lib/deals.ts';
 
 test('direct Home Depot links preserve leading store zeroes and reject injected destinations', () => {
   assert.equal(homeDepotStoreUrl('339011675', '0251'), 'https://www.homedepot.com/p/339011675?store=0251');
@@ -53,4 +54,10 @@ test('stock endpoint accepts the direct response as well as the API data envelop
   assert.equal(parseHomeDepotStockResponse({success: true, data: stock}, '339011675', '33101').stores[0].price, 20.4);
   assert.throws(() => parseHomeDepotStockResponse({success: false, stores: []}, '339011675', '33101'));
   assert.throws(() => parseHomeDepotStockResponse({error: 'upstream error'}, '339011675', '33101'));
+});
+test('catalog Home Depot products use their SKU or a direct merchant product number',()=>{
+ assert.equal(dealSku({retailer:'home_depot',sku:'339011675'}),'339011675');
+ assert.equal(dealSku({retailer:'home_depot',dealLink:'https://www.homedepot.com/p/Espresso/339011675?store=0251'}),'339011675');
+ assert.equal(dealSku({retailer:'home_depot',dealLink:'https://other.example/p/339011675'}),undefined);
+ assert.equal(dealSku({retailer:'amazon',sku:'339011675'}),undefined);
 });

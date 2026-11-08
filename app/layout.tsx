@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Clearance Radar · Todas las ofertas, un solo lugar",
-  description: "Explora las ofertas públicas de Hidden Clearances, compara descuentos y abre el enlace de compra resuelto por su API.",
+  description: "Encuentra las mejores ofertas, compara descuentos y consulta disponibilidad en tiendas con Clearance Radar.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

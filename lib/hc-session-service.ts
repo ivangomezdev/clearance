@@ -20,7 +20,7 @@ function credentials(value: unknown): HcCredentials {
   if (!value || typeof value !== 'object' || !('accessToken' in value) || !('refreshToken' in value) ||
       typeof value.accessToken !== 'string' || typeof value.refreshToken !== 'string' ||
       !/^[A-Za-z0-9_-]{8,4096}$/.test(value.refreshToken) || value.accessToken.length > 12000 ||
-      sessionAccess(value.accessToken).info.status === 'invalid') throw Error('Sesión de Hidden Clearances no válida.');
+      sessionAccess(value.accessToken).info.status === 'invalid') throw Error('Sesión de la cuenta de inventario no válida.');
   return {accessToken: value.accessToken, refreshToken: value.refreshToken};
 }
 function claims(token: string) { return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()); }
@@ -69,7 +69,7 @@ export function clearHcSession(request: Request, response: Response) { return ap
 
 export class RefreshFailure extends Error {
   readonly permanent: boolean;
-  constructor(permanent: boolean) { super('No se pudo renovar la sesión de Hidden Clearances.'); this.permanent = permanent; }
+  constructor(permanent: boolean) { super('No se pudo renovar la sesión de la cuenta de inventario.'); this.permanent = permanent; }
 }
 export async function rotateHcCredentials(value: HcCredentials, fetcher: Fetcher, now: () => number): Promise<HcCredentials> {
   const key = Buffer.from(await crypto.subtle.digest('SHA-256', encoder.encode(value.refreshToken))).toString('base64url');
@@ -156,7 +156,7 @@ export async function verifyHcCredentials(input: unknown, config: HcConfig = pro
   const response = await fetcher(`${HC_AUTH_ORIGIN}/auth/v1/user`, {
     headers: {apikey: HC_ANON_KEY, Authorization: `Bearer ${value.accessToken}`}, signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error',
   });
-  if (!response.ok) throw Error('La sesión no es válida. Conecta de nuevo desde Hidden Clearances.');
+  if (!response.ok) throw Error('La sesión no es válida. Conecta de nuevo desde la cuenta de inventario.');
   const user = await response.json() as {id?: string};
   if (!user.id || user.id !== claims(value.accessToken).sub) throw Error('La sesión no es válida.');
   return value;

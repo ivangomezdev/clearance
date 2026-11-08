@@ -1,8 +1,8 @@
 // This function runs only when the user activates the saved bookmark on the source site.
-// Transfer only the Hidden Clearances session, never Google credentials or other cookies.
+// Transfer only the la cuenta de inventario session, never Google credentials or other cookies.
 function sendCurrentSession(target: string) {
   const source = 'https://www.hiddenclearances.com';
-  if (location.origin !== source) { alert('Abre Hidden Clearances e inicia sesión antes de usar este marcador.'); return; }
+  if (location.origin !== source) { alert('Abre la cuenta de inventario e inicia sesión antes de usar este marcador.'); return; }
   const name = 'sb-cdqqxarqppyvctffzsax-auth-token';
   let session: {access_token?: string; refresh_token?: string};
   try {
@@ -14,9 +14,9 @@ function sendCurrentSession(target: string) {
     if (raw.startsWith('base64-')) raw = new TextDecoder().decode(Uint8Array.from(atob(raw.slice(7).replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0)));
     session = JSON.parse(raw);
     if (typeof session.access_token !== 'string' || typeof session.refresh_token !== 'string') throw Error();
-  } catch { alert('No se encontró una sesión activa de Hidden Clearances. Inicia sesión y vuelve a usar el marcador.'); return; }
+  } catch { alert('No se encontró una sesión activa de la cuenta de inventario. Inicia sesión y vuelve a usar el marcador.'); return; }
   const challenge = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
-  const popup = window.open(`${target}/connect/hidden-clearances#pair=${challenge}`, '_blank');
+  const popup = window.open(`${target}/settings/inventory#pair=${challenge}`, '_blank');
   if (!popup) { alert('Permite abrir la ventana de conexión y vuelve a usar el marcador.'); return; }
   const timer = setTimeout(cleanup, 120000);
   function cleanup() { clearTimeout(timer); window.removeEventListener('message', receive); session = {}; }

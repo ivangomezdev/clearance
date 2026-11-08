@@ -126,3 +126,22 @@ html input[type='checkbox'] { accent-color: #806414; }
 }
 
 .source-description-label { margin-top: 18px; font-size: 10px; color: #77796e; font-weight: 650; }
+.inventory-reconnect { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: #806414; text-decoration: underline; }
+.initial-loader { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; min-height: 100svh; padding: 28px; background: #181914; color: #f5f3e8; overflow: hidden; }
+.initial-loader::before { content: ''; position: absolute; width: min(840px, 140vw); aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: repeating-radial-gradient(circle, transparent 0 109px, #c9a22712 110px 111px); }
+.loader-content { position: relative; text-align: center; }
+.loader-orbit { position: relative; width: 154px; height: 154px; display: grid; place-items: center; margin: 0 auto 28px; }
+.loader-orbit img { border-radius: 25px; box-shadow: 0 0 70px #c9a2271f; animation: loader-breathe 2.4s ease-in-out infinite; }
+.loader-ring { position: absolute; inset: 0; border: 1px solid #c9a22730; border-top: 2px solid #c9a227; border-right: 2px solid #c9a227; border-radius: 50%; animation: loader-turn 2s linear infinite; }
+.loader-ring::after { content: ''; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #dfbc49; top: 19px; right: 16px; box-shadow: 0 0 15px #c9a2278f; }
+.loader-brand { color: #f5f3e8; font: 800 22px Manrope, sans-serif; letter-spacing: -.8px; }
+.loader-brand span { color: #c9a227; }
+.initial-loader h1 { font: 550 clamp(20px, 3vw, 27px)/1.5 'DM Sans', sans-serif; letter-spacing: -.5px; color: #c9cbbb; margin: 20px auto 24px; max-width: 100%; }
+.loader-dots { display: flex; justify-content: center; gap: 7px; }
+.loader-dots span { width: 5px; height: 5px; background: #c9a227; border-radius: 50%; animation: loader-dot 1.4s ease-in-out infinite; }
+.loader-dots span:nth-child(2) { animation-delay: .18s; }
+.loader-dots span:nth-child(3) { animation-delay: .36s; }
+@keyframes loader-turn { to { transform: rotate(360deg); } }
+@keyframes loader-breathe { 50% { transform: scale(.96); box-shadow: 0 0 85px #c9a22733; } }
+@keyframes loader-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .initial-loader * { animation: none !important; } }

@@ -12,5 +12,5 @@ export async function upstream(path:string, request:Request) {
     const body=await r.text();
     let data;try{data=JSON.parse(body);}catch{return session.apply(Response.json({error:'La API devolvió una respuesta no válida.'},{status:502}));}
     return session.apply(Response.json({...data,session:session.info},{status:r.status,headers:{'Cache-Control':'private, no-store','X-Upstream-Duration':String(Date.now()-start),'X-Upstream-Path':path,...(r.headers.get('retry-after')?{'Retry-After':r.headers.get('retry-after')!}:{})}}));
-  }catch{return session.apply(Response.json({error:'No se pudo conectar con Hidden Clearances. Vuelve a intentar.'},{status:502}));}
+  }catch{return session.apply(Response.json({error:'No se pudo conectar con la cuenta de inventario. Vuelve a intentar.'},{status:502}));}
 }
