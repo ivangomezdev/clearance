@@ -6,6 +6,8 @@ Dashboard en español conectado a las ofertas públicas de Hidden Clearances. Pr
 
 ### Vercel / Next.js
 
+La instalación canónica es `https://clearance-two.vercel.app`, donde se mantiene el inventario compartido con renovación automática al consultar. `clearance-4gma.vercel.app` redirige a ella conservando la ruta y los parámetros; esa segunda instalación no tenía los secretos de inventario. La regla se limita al dominio alternativo y no redirige la instalación principal ni los previews. Así ambas direcciones públicas utilizan una sola conexión renovable, en lugar de mantener copias independientes de los tokens.
+
 El repositorio incluye `vercel.json` con el preset `nextjs`, instalación mediante `npm ci`, build `npm run build:vercel` y salida `.next`. Importa la raíz del repositorio en Vercel. El dashboard funciona con la API pública sin variables obligatorias. La sesión opcional de Hidden Clearances y Discord usan secretos del servidor descritos más abajo.
 
 - `npm run dev:vercel`: desarrollo con Next.js.
