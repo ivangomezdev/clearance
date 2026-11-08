@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "Clearance Radar · Todas las ofertas, un solo lugar",
   description: "Encuentra las mejores ofertas, compara descuentos y consulta disponibilidad en tiendas con Clearance Radar.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/favicon.svg?v=yellow-2",
+    shortcut: "/favicon.svg?v=yellow-2",
   },
 };
 

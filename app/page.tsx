@@ -20,7 +20,8 @@ function age(s:string){const hours=Math.max(0,(Date.now()-Date.parse(s))/3600000
 const date=(s:string)=>new Date(s).toLocaleString('es-MX',{timeZone:'America/Cancun',dateStyle:'medium',timeStyle:'short'});
 
 export default function Dashboard(){
- const [initialPending,setInitialPending]=useState(true),[navigationReady,setNavigationReady]=useState(false);
+ const [initialPending,setInitialPending]=useState(true),[initialDelayDone,setInitialDelayDone]=useState(false),[navigationReady,setNavigationReady]=useState(false);
+ const showInitialLoader=initialPending||!initialDelayDone;
  const [hiddenDeals,setDeals]=useState<Deal[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[total,setTotal]=useState(0),[progress,setProgress]=useState({done:0,pages:0}),[updated,setUpdated]=useState(''),[waiting,setWaiting]=useState('');
  const [canManageInventory,setCanManageInventory]=useState(false);
  const [sessionInfo,setSessionInfo]=useState<SessionInfo>({status:'public'}),[feedAdded,setFeedAdded]=useState(0),[feedLocked,setFeedLocked]=useState(0);
@@ -30,6 +31,7 @@ export default function Dashboard(){
  const [showReview,setShowReview]=useState(false),[section,setSection]=useState('offers'),[query,setQuery]=useState(''),[retailer,setRetailer]=useState(''),[minDiscount,setMinDiscount]=useState(0),[status,setStatus]=useState('all'),[sort,setSort]=useState('newest'),[tag,setTag]=useState(''),[maxPrice,setMaxPrice]=useState(''),[history,setHistory]=useState(false),[auto,setAuto]=useState(false),[more,setMore]=useState(false),[view,setView]=useState('grid'),[page,setPage]=useState(1);
  const [favorites,setFavorites]=useState<string[]>([]),[selected,setSelected]=useState<Deal|null>(null),[redirect,setRedirect]=useState<{redirectUrl:string;affiliateProvider?:string}|null>(null),[redirectError,setRedirectError]=useState(''),[resolving,setResolving]=useState(false),[toast,setToast]=useState(''),[logs,setLogs]=useState<Log[]>([]),[stopped,setStopped]=useState(false);
  const controller=useRef<AbortController|null>(null),run=useRef(0),logId=useRef(0),dialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{const timer=setTimeout(()=>setInitialDelayDone(true),4000);return()=>clearTimeout(timer);},[]);
  useEffect(()=>{const saved=restoredDeal(browserStorage('sessionStorage'));if(saved)setSelected(saved);setNavigationReady(true);},[]);
  useEffect(()=>{if(navigationReady)rememberOpenDeal(browserStorage('sessionStorage'),selected);},[selected,navigationReady]);
  useEffect(()=>{const c=new AbortController();fetch('/api/hc-session',{signal:c.signal,cache:'no-store'}).then(r=>r.json() as Promise<{canManage?:boolean;session?:SessionInfo}>).then(data=>{if(!c.signal.aborted){setCanManageInventory(data.canManage===true);if(data.session)setSessionInfo(data.session);}}).catch(()=>{});return()=>c.abort();},[]);
@@ -84,7 +86,7 @@ export default function Dashboard(){
  useEffect(()=>{if(!auto)return;const t=setInterval(()=>{if(!document.hidden&&!loading)sync(history);},300000);return()=>clearInterval(t);},[auto,history,loading,sync]);
  useEffect(()=>{setPage(1);},[query,retailer,minDiscount,status,sort,tag,maxPrice,section,showReview]);
  useEffect(()=>{
-   if(initialPending)return;
+   if(showInitialLoader)return;
    if(!selected){dialog.current?.close();return;}
    if(!dialog.current?.open)dialog.current?.showModal();
    setRedirect(null);setRedirectError('');setResolving(true);
@@ -99,7 +101,7 @@ export default function Dashboard(){
      setRedirect(j.data);
    }).catch(e=>{if(!c.signal.aborted)setRedirectError(e.message);}).finally(()=>{if(!c.signal.aborted)setResolving(false);});
    return()=>c.abort();
- },[selected,record,initialPending]);
+ },[selected,record,showInitialLoader]);
  const stores=useMemo(()=>{const counts=new Map<string,number>([['discord',0]]);deals.forEach(d=>counts.set(d.retailer,(counts.get(d.retailer)||0)+1));return [...counts.entries()].sort((a,b)=>b[1]-a[1]);},[deals]);
  const tags=useMemo(()=>{const m=new Map<string,string>();deals.forEach(d=>d.tags?.forEach(t=>m.set(t.slug,t.label)));return [...m];},[deals]);
  const filtered=useMemo(()=>{
@@ -114,10 +116,10 @@ export default function Dashboard(){
  const exportData=()=>{const blob=new Blob([JSON.stringify({source:'Clearance Radar',exportedAt:new Date().toISOString(),discordSource:'Discord (sesión, carga independiente)',discordCount:discordDeals.length,currency:'USD',complete:discordDeals.length===0&&!!updated&&!error&&!stopped,discordScope:"Solo mensajes cargados en esta sesión; no implica historial completo",received:hiddenDeals.length,apiTotal:total,inStoreAdded:feedAdded,restrictedFeedItems:feedLocked,includeHistory:history,deals:filtered.map(d=>({id:d.id,title:publicCopy(dealPrice(d).title),description:publicCopy(d.dealContent),retailer:retailerName(d.retailer),createdAt:d.createdAt,expiresAt:d.expiresAt,displayPrice:d.source==='discord'?null:{...dealPrice(d),title:publicCopy(dealPrice(d).title)}}))},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='clearance-radar.json';a.click();URL.revokeObjectURL(u);setToast(`${number(filtered.length)} ofertas exportadas`);};
  const copy=async(s:string)=>{try{await navigator.clipboard.writeText(s);setToast('Copiado al portapapeles');}catch{setToast('No se pudo copiar. Selecciona el texto manualmente.');}};
  const isFiltered=!!(showReview||query||retailer||minDiscount||tag||maxPrice||status!=='all');
- if(initialPending)return <InitialLoader/>;
+ if(showInitialLoader)return <InitialLoader/>;
  return <div className="app-shell">
   <aside className="sidebar">
-   <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><img src="/favicon.svg" width="44" height="44" alt=""/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
+   <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><img src="/favicon.svg?v=yellow-2" width="44" height="44" alt=""/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
    <div className="workspace-label">TU OBSERVATORIO DE OFERTAS</div>
    <nav aria-label="Navegación principal">
     <button className={section==='staffspicks'?'nav-item selected':'nav-item'} onClick={()=>setSection('staffspicks')}><Tag size={18}/> staffspicks</button>
