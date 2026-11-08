@@ -33,6 +33,10 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 
 ## Comportamiento
 
+- Revisión de precios en catálogo y Staff Picks: separa total de paquete y precio por unidad cuando el texto es explícito. Ejemplo: Atkins recibido a USD 1, cuya descripción indica USD 13 por 12, se muestra a USD 13 por paquete, aproximadamente USD 1,08 por unidad, con cupón, suscripción y variación por cuenta. Es una aclaración de la publicación, no una verificación del precio actual de Amazon.
+- Los importes ausentes o contradictorios se ocultan por defecto. El filtro **Mostrar ofertas con precio por confirmar** permite consultarlos sin presentar un precio o descuento dudoso. Descuentos, filtros y ordenación usan el total aclarado; la exportación conserva los campos originales y añade `displayPrice`. Las condiciones se detectan de forma conservadora; no se consulta automáticamente el precio del comercio ni se garantiza que todo error del origen sea detectable.
+- Regresiones de precios: `node --experimental-strip-types --test tests/offer-price.test.mjs tests/deals.test.mjs tests/staffspicks.test.mjs`.
+
 - Carga todas las páginas del alcance seleccionado, con peticiones secuenciales separadas por al menos 1,25 segundos, y elimina duplicados por ID.
 - Por defecto carga activas; **Incluir historial** vuelve a cargar también las inactivas/vencidas. Los contadores y filtros corresponden al conjunto recibido.
 - Los resultados se presentan en páginas de 24 tarjetas, sin limitar el conjunto de datos descargado.

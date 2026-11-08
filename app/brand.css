@@ -95,6 +95,18 @@ html input[type='checkbox'] { accent-color: #806414; }
 }
 .staffspicks .results-toolbar label { display: flex; align-items: center; gap: 6px; }
 .staffspicks .footnote a { color: #806414; text-decoration: underline; }
+.offer-pricing { min-width: 0; }
+.offer-pricing .prices { flex-wrap: wrap; white-space: normal; }
+.price-notes { margin: -4px 0 12px; padding: 0; list-style: none; font-size: 10px; line-height: 1.6; color: #6b613c; }
+.price-notes li { overflow-wrap: anywhere; }
+.price-notes li:first-child { font-weight: 650; }
+.price-review .prices strong { font-size: 16px; }
+.price-review .price-notes { color: #8b5622; }
+.price-review-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 18px; margin: 18px 0 12px; font-size: 11px; color: #666a5c; }
+.price-review-filter label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.price-review-filter span { font-size: 10px; color: #74776b; }
+.detail-info .price-notes { margin: 12px 0 16px; font-size: 12px; }
+.detail-info .offer-pricing .detail-price { flex-wrap: wrap; }
 
 @media (max-width: 900px) {
   .app-shell .brand { gap: 0; }
@@ -109,4 +121,8 @@ html input[type='checkbox'] { accent-color: #806414; }
   .app-shell .title-row::after { right: -190px; top: -50px; }
   .app-shell .filter-bar { flex-wrap: wrap; }
   .app-shell .staffspicks > .filter-bar { padding: 12px; }
+  .price-notes { font-size: 9px; }
+  .price-review .prices strong { font-size: 13px; }
 }
+
+.source-description-label { margin-top: 18px; font-size: 10px; color: #77796e; font-weight: 650; }
