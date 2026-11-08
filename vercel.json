@@ -6,6 +6,12 @@
   "outputDirectory": ".next",
   "redirects": [
     {
+      "source": "/",
+      "has": [{"type": "host", "value": "clearance-4gma.vercel.app"}],
+      "destination": "https://clearance-two.vercel.app/",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
       "has": [{"type": "host", "value": "clearance-4gma.vercel.app"}],
       "destination": "https://clearance-two.vercel.app/:path*",
