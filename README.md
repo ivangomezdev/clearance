@@ -44,7 +44,8 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 - Los importes ausentes o contradictorios se ocultan por defecto. El filtro **Mostrar ofertas con precio por confirmar** permite consultarlos sin presentar un precio o descuento dudoso. Descuentos, filtros y ordenación usan el total aclarado; la exportación conserva los campos originales y añade `displayPrice`. Las condiciones se detectan de forma conservadora; no se consulta automáticamente el precio del comercio ni se garantiza que todo error del origen sea detectable.
 - Regresiones de precios: `node --experimental-strip-types --test tests/offer-price.test.mjs tests/deals.test.mjs tests/staffspicks.test.mjs`.
 
-- Carga todas las páginas del alcance seleccionado, con peticiones secuenciales separadas por al menos 1,25 segundos, y elimina duplicados por ID.
+- Carga todas las páginas con hasta tres peticiones en curso: dos del catálogo y una del feed, para que las ofertas en tienda lleguen antes. Los inicios se separan al menos 1,25 segundos, sin sumar esa espera a cada respuesta. Ante HTTP 429 todos los trabajadores comparten la pausa y respetan Retry-After. El catálogo prevalece sobre duplicados del feed, independientemente del orden de llegada.
+- Los filtros usan letra más grande y accesos fijos a Home Depot, Walmart, Amazon, Woot, Target y Discord desde el inicio. El selector conserva ese orden, incluye otras tiendas conocidas y añade las nuevas al final.
 - Por defecto carga activas; **Incluir historial** vuelve a cargar también las inactivas/vencidas. Los contadores y filtros corresponden al conjunto recibido.
 - Los resultados se presentan en páginas de 24 tarjetas, sin limitar el conjunto de datos descargado.
 - Un fallo de carga conserva datos parciales y muestra el error; no se simulan productos ni se presentan datos parciales como completos.
@@ -60,7 +61,7 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 
 ## Límites
 
-La paginación por número no es una instantánea atómica: ofertas añadidas o eliminadas mientras se carga pueden causar diferencias entre elementos únicos y total reportado. La interfaz indica ambos. Se respeta cualquier respuesta de error o limitación de la API, incluidos 401/403/429. Ante 429 se conserva el avance, se espera al menos 65 segundos o Retry-After (lo que sea mayor) y se reintenta la misma página hasta tres veces antes de mostrar error. El servicio externo puede cambiar sus rutas, esquema o disponibilidad. Las imágenes se cargan desde las URLs que devuelve el origen. El precio y disponibilidad definitivos se comprueban en la tienda. No hay base de datos ni copia persistente del catálogo.
+La paginación por número no es una instantánea atómica: ofertas añadidas o eliminadas mientras se carga pueden causar diferencias entre elementos únicos y total reportado. La exportación conserva ambos valores. Se respeta cualquier respuesta de error o limitación de la API, incluidos 401/403/429. Ante 429 se conserva el avance, se espera al menos 65 segundos o Retry-After (lo que sea mayor) y se reintenta la misma página hasta tres veces antes de mostrar error. El servicio externo puede cambiar sus rutas, esquema o disponibilidad. Las imágenes se cargan desde las URLs que devuelve el origen. El precio y disponibilidad definitivos se comprueban en la tienda. No hay base de datos ni copia persistente del catálogo.
 
 
 ### Límite de paginación histórica verificado

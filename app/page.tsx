@@ -7,14 +7,15 @@ import {InitialLoader} from '../components/initial-loader';
 import {rememberOpenDeal, restoredDeal} from '../lib/deal-navigation';
 import {publicCopy} from '../lib/public-copy';
 import type {SessionInfo} from '../lib/hc-session';
+import {loadCatalog, type CatalogLog} from '../lib/catalog-loader';
+import {QUICK_RETAILERS, retailerOptions} from '../lib/retailers';
 import {OfferPriceDisplay} from '../components/offer-price';
 import {StaffPicks} from '../components/staffspicks';
 import {StoreAvailability} from '../components/store-availability';
 import {DiscordSource} from '../components/discord-source';
-import {Deal,dealPrice,dealSku,discount,expired,retailerName,safeUrl,sourceUrl,validatePage} from '../lib/deals';
+import {Deal,dealPrice,dealSku,discount,expired,retailerName,safeUrl,sourceUrl} from '../lib/deals';
 
-type Log={id:number;path:string;status:number;ms:number;count:number;time:string;pagination?:{page:number;totalPages:number;total:number};error?:string};
-type CatalogResponse={success?:boolean;session?:SessionInfo;lockedSkipped?:number;received?:number;data?:Deal[];pagination?:{page:number;totalPages:number;total:number};error?:string};
+type Log=CatalogLog&{id:number};
 const number=(n:number)=>n.toLocaleString('es-MX');
 function age(s:string){const hours=Math.max(0,(Date.now()-Date.parse(s))/3600000);return hours<1?'Hace unos minutos':hours<24?`Hace ${Math.floor(hours)} h`:`Hace ${Math.floor(hours/24)} d`;}
 const date=(s:string)=>new Date(s).toLocaleString('es-MX',{timeZone:'America/Cancun',dateStyle:'medium',timeStyle:'short'});
@@ -41,42 +42,11 @@ export default function Dashboard(){
  const sync=useCallback(async(includeHistory:boolean)=>{
    controller.current?.abort();const c=new AbortController();controller.current=c;const token=++run.current;
    setLoading(true);setError('');setDeals([]);setTotal(0);setProgress({done:0,pages:0});setUpdated('');setLogs([]);setFeedAdded(0);setFeedLocked(0);
-   const collected=new Map<string,Deal>();let completed=0;
-   const pause=(ms:number)=>new Promise<void>((resolve,reject)=>{if(c.signal.aborted){reject(new DOMException('Aborted','AbortError'));return;}const abort=()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));};const timer=setTimeout(()=>{c.signal.removeEventListener('abort',abort);resolve();},ms);c.signal.addEventListener('abort',abort,{once:true});});
-   async function getPage(p:number,attempt=0):Promise<number>{
-     const path=`/api/v1/deals?limit=50&page=${p}&activeOnly=${!includeHistory}`,t=performance.now();
-     let r:Response;try{r=await fetch(`/api/deals?page=${p}&activeOnly=${!includeHistory}`,{signal:c.signal});}catch(e){if(!c.signal.aborted)record({path,status:0,ms:Math.round(performance.now()-t),count:0,time:new Date().toISOString(),error:'Error de conexión'});throw e;}
-     const body=await r.json() as CatalogResponse;if(c.signal.aborted||token!==run.current)throw new DOMException('Aborted','AbortError');if(body.session)setSessionInfo(body.session);
-     record({path,status:r.status,ms:Math.round(performance.now()-t),count:Array.isArray(body.data)?body.data.length:0,time:new Date().toISOString(),pagination:body.pagination,error:body.error});
-     if(r.status===429&&attempt<3){const header=r.headers.get('retry-after');const seconds=header?(Number.isFinite(Number(header))?Number(header):Math.max(0,(Date.parse(header)-Date.now())/1000)):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);await pause(delay*1000);return getPage(p,attempt+1);}
-     if(!r.ok||body.success===false)throw new Error(r.status===429?'La API limitó las solicitudes. Espera un momento y vuelve a sincronizar.':body.error||`Error HTTP ${r.status}`);
-     if(!Array.isArray(body.data)||!body.pagination||!Number.isInteger(body.pagination.totalPages))throw new Error('El formato de la API ha cambiado.');
-     validatePage(p,body.pagination.page);
-     body.data.forEach((d:Deal)=>{if(d.id)collected.set(d.id,d);});completed++;
-     setDeals([...collected.values()]);if(p===1)setInitialPending(false);setTotal(body.pagination.total);setProgress({done:completed,pages:body.pagination.totalPages});
-     return body.pagination.totalPages as number;
-   }
    try{
-     const pages=await getPage(1);
-     for(let p=2;p<=pages&&!c.signal.aborted;p++){await pause(1250);await getPage(p);}
-     if(!c.signal.aborted){
-      let feedPages=1,added=0,locked=0;
-      for(let p=1;p<=feedPages;p++){
-       await pause(1250);
-       let body:CatalogResponse|undefined;
-       for(let attempt=0;attempt<4;attempt++){
-        const t=performance.now(),r=await fetch(`/api/feed?page=${p}`,{signal:c.signal});body=await r.json() as CatalogResponse;
-        if(c.signal.aborted||token!==run.current)throw new DOMException('Aborted','AbortError');
-        record({path:`/api/v1/feed?limit=50&page=${p}`,status:r.status,ms:Math.round(performance.now()-t),count:body.data?.length||0,time:new Date().toISOString(),pagination:body.pagination,error:body.error});
-        if(r.status===429&&attempt<3){const h=r.headers.get('retry-after'),seconds=h?(Number.isFinite(Number(h))?Number(h):(Date.parse(h)-Date.now())/1000):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);await pause(delay*1000);continue;}
-        if(!r.ok||body.success===false)throw Error(body.error||`Error del feed HTTP ${r.status}`);break;
-       }
-       if(!body||!Array.isArray(body.data)||!body.pagination||!Number.isInteger(body.pagination.totalPages))throw Error('El formato del feed ha cambiado.');
-       validatePage(p,body.pagination.page);if(body.session)setSessionInfo(body.session);feedPages=body.pagination.totalPages;
-       for(const d of body.data){if(!collected.has(d.id)){collected.set(d.id,d);added++;}}
-       locked+=body.lockedSkipped||0;setDeals([...collected.values()]);setFeedAdded(added);setFeedLocked(locked);
-      }
-     }
+     await loadCatalog({signal:c.signal,includeHistory,onLog:record,onSession:setSessionInfo,
+       onFirstPage:()=>{if(token===run.current)setInitialPending(false);},
+       onChange:snapshot=>{if(token!==run.current||c.signal.aborted)return;setDeals(snapshot.deals);setTotal(snapshot.total);setProgress({done:snapshot.completed,pages:snapshot.pages});setFeedAdded(snapshot.feedAdded);setFeedLocked(snapshot.feedLocked);}
+     });
      if(token===run.current&&!c.signal.aborted)setUpdated(new Date().toISOString());
    }catch(e){if(token===run.current&&!c.signal.aborted){setError(e instanceof Error?e.message:'Error al sincronizar');c.abort();}}
    finally{if(token===run.current){setLoading(false);setInitialPending(false);}}
@@ -100,7 +70,7 @@ export default function Dashboard(){
    }).catch(e=>{if(!c.signal.aborted)setRedirectError(e.message);}).finally(()=>{if(!c.signal.aborted)setResolving(false);});
    return()=>c.abort();
  },[selected,record,showInitialLoader]);
- const stores=useMemo(()=>{const counts=new Map<string,number>([['discord',0]]);deals.forEach(d=>counts.set(d.retailer,(counts.get(d.retailer)||0)+1));return [...counts.entries()].sort((a,b)=>b[1]-a[1]);},[deals]);
+ const stores=useMemo(()=>retailerOptions(deals),[deals]);
  const tags=useMemo(()=>{const m=new Map<string,string>();deals.forEach(d=>d.tags?.forEach(t=>m.set(t.slug,t.label)));return [...m];},[deals]);
  const filtered=useMemo(()=>{
    const q=query.toLowerCase().trim();let result=deals.filter(d=>(showReview||d.source==='discord'||!dealPrice(d).review)&&(section!=='saved'||favorites.includes(d.id))&&(!q||`${d.title} ${d.headline||''} ${d.dealContent||''} ${retailerName(d.retailer)}`.toLowerCase().includes(q))&&(!retailer||d.retailer===retailer)&&discount(d)>=minDiscount&&(!tag||d.tags?.some(t=>t.slug===tag))&&(status==='all'||(d.source!=='discord'&&(status==='active'?!expired(d):expired(d))))&&(!maxPrice||(dealPrice(d).amount!==null&&dealPrice(d).amount!<=Number(maxPrice))));
@@ -126,7 +96,7 @@ export default function Dashboard(){
     <button className={section==='network'?'nav-item selected':'nav-item'} onClick={()=>setSection('network')}><Activity size={18}/> Actividad de API <span className="live-dot"/></button>
    </nav>
    <div className="sidebar-divider"/><div className="workspace-label">TIENDAS EN EL RADAR</div>
-   <div className="store-nav">{[...stores.filter(([s])=>s==='discord'),...stores.filter(([s])=>s!=='discord').slice(0,5)].map(([s,n])=><button className={retailer===s?'store-selected':''} key={s} onClick={()=>{setRetailer(s);setSection('offers');}}><span className={`store-symbol store-${s}`}>{retailerName(s)[0]}</span><span>{retailerName(s)}</span><small>{number(n)}</small></button>)}</div>
+   <div className="store-nav">{stores.filter(([s])=>QUICK_RETAILERS.some(store=>store===s)).map(([s,n])=><button className={retailer===s?'store-selected':''} key={s} onClick={()=>{setRetailer(s);setSection('offers');}}><span className={`store-symbol store-${s}`}>{retailerName(s)[0]}</span><span>{retailerName(s)}</span><small>{number(n)}</small></button>)}</div>
    <div className="sidebar-bottom"><div className="source-card"><span className="source-icon"><RadioMark/></span><strong>Tu próximo gran hallazgo</strong><p>Descubre más.<br/>Paga menos.</p></div><div className="profile"><span>LR</span><div>Mi espacio personal<small>Clearance Radar</small></div><span className="profile-dot"/></div></div>
   </aside>
   <div className="main-shell"><header className="topbar"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/><strong>{section==='staffspicks'?'Staff Picks':section==='saved'?'Guardadas':section==='network'?'Actividad de API':'Explorar ofertas'}</strong></div><div className="topbar-right"><span className={`connection ${section!=='staffspicks'&&error?'warning':''}`}><i/>{section==='staffspicks'?'Staff Picks':error?'Conexión interrumpida':loading?'Sincronizando API':updated?'API conectada':'Carga parcial'}</span><span className="currency">USD</span><span className="avatar">LR</span></div></header>
@@ -136,10 +106,10 @@ export default function Dashboard(){
     {error&&<div className="error-banner"><AlertCircle size={18}/><span>{publicCopy(error)} Se conservan las {number(deals.length)} ofertas recibidas.</span><button onClick={()=>sync(history)}>Reintentar</button></div>}
     {retailer==='discord'&&section!=='network'&&<DiscordSource count={discordDeals.length} onPage={receiveDiscord} onClear={()=>{setDiscordDeals([]);setSelected(null);}}/>}
     {section==='network'?<section className="network-panel"><div className="panel-heading"><div><h2>Actividad de la conexión</h2><p>Consultas de ofertas y enlaces de compra</p></div><span className="small-pill">{logs.length} peticiones registradas</span></div><div className="api-explanation"><Code2 size={24}/><div><strong>Dos llamadas, del catálogo a la compra</strong><p><code>/api/v1/deals?limit=50&amp;page=N</code> entrega productos y paginación. Al abrir un detalle, <code>/api/v1/deals/&#123;id&#125;/redirect-url</code> resuelve el destino de “Get Deal”. La ficha original incluye sus datos iniciales en HTML/RSC.</p></div></div><div className="network-table"><table><thead><tr><th>ESTADO</th><th>PETICIÓN</th><th>RESULTADOS</th><th>TIEMPO</th></tr></thead><tbody>{logs.map(l=><tr key={l.id}><td><span className={l.status===200?'http-status':'http-status failed'}>{l.status||'ERR'}</span></td><td><code>GET {l.path}</code><small>{date(l.time)}{l.error?` · ${publicCopy(l.error)}`:''}</small></td><td>{l.count}</td><td>{l.ms} ms</td></tr>)}</tbody></table>{!logs.length&&<div className="empty-state">Todavía no hay peticiones.</div>}</div><p className="footnote">Se muestran las últimas 600 peticiones de esta sesión. Las duraciones incluyen el proxy del dashboard. La API usa paginación por número: si el catálogo cambia durante la carga, puede haber diferencias con el total; se eliminan duplicados por ID.</p></section>:<>
-     <section className="offers-section"><div className="section-heading"><div className="section-tabs"><button className="tab-active" onClick={()=>{clear();}}>{section==='saved'?'Ofertas guardadas':'Todas las ofertas'} <span>{number(filtered.length)}</span></button><span className="public-label">CATÁLOGO PÚBLICO</span></div><button className="export" onClick={exportData} disabled={!filtered.length}><Download size={15}/> Exportar JSON</button></div>
-      <div className="filter-bar"><div className="search-box"><Search size={18}/><input aria-label="Buscar ofertas" placeholder="Buscar producto, marca o tienda…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button aria-label="Limpiar búsqueda" onClick={()=>setQuery('')}><X size={14}/></button>}</div><select aria-label="Filtrar por tienda" value={retailer} onChange={e=>setRetailer(e.target.value)}><option value="">Todas las tiendas</option>{stores.map(([s,n])=><option value={s} key={s}>{retailerName(s)} ({n})</option>)}</select><select aria-label="Descuento mínimo" value={minDiscount} onChange={e=>setMinDiscount(Number(e.target.value))}><option value={0}>Cualquier descuento</option><option value={25}>25% o más</option><option value={50}>50% o más</option><option value={70}>70% o más</option><option value={90}>90% o más</option></select><button className={more?'filter-button active':'filter-button'} aria-expanded={more} onClick={()=>setMore(!more)}><SlidersHorizontal size={16}/> Filtros</button></div>
+     <section className="offers-section catalog-filters" aria-label="Filtros de ofertas"><div className="section-heading"><div className="section-tabs"><button className="tab-active" onClick={()=>{clear();}}>{section==='saved'?'Ofertas guardadas':'Todas las ofertas'} <span>{number(filtered.length)}</span></button><span className="public-label">CATÁLOGO PÚBLICO</span></div><button className="export" onClick={exportData} disabled={!filtered.length}><Download size={15}/> Exportar JSON</button></div>
+      <div className="filter-bar"><div className="search-box"><Search size={18}/><input aria-label="Buscar ofertas" placeholder="Buscar producto, marca o tienda…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button aria-label="Limpiar búsqueda" onClick={()=>setQuery('')}><X size={14}/></button>}</div><select aria-label="Filtrar por tienda" value={retailer} onChange={e=>setRetailer(e.target.value)}><option value="">Todas las tiendas</option>{stores.map(([s])=><option value={s} key={s}>{retailerName(s)}</option>)}</select><select aria-label="Descuento mínimo" value={minDiscount} onChange={e=>setMinDiscount(Number(e.target.value))}><option value={0}>Cualquier descuento</option><option value={25}>25% o más</option><option value={50}>50% o más</option><option value={70}>70% o más</option><option value={90}>90% o más</option></select><button className={more?'filter-button active':'filter-button'} aria-expanded={more} onClick={()=>setMore(!more)}><SlidersHorizontal size={16}/> Filtros</button></div>
       {more&&<div className="extra-filters"><label>Estado<select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">Todos los recibidos</option><option value="active">Vigentes</option><option value="expired">Vencidas / inactivas</option></select></label><label>Etiqueta<select value={tag} onChange={e=>setTag(e.target.value)}><option value="">Todas las etiquetas</option>{tags.map(([s,l])=><option key={s} value={s}>{publicCopy(l)}</option>)}</select></label><label>Precio máximo (USD)<input type="number" min="0" placeholder="Sin límite" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)}/></label></div>}
-      <div className="collection-row"><div className="store-chips"><button className={!retailer?'chip chosen':'chip'} onClick={()=>setRetailer('')}>Todas</button>{[...stores.filter(([s])=>s!=='discord').slice(0,4),...stores.filter(([s])=>s==='discord')].map(([s])=><button className={retailer===s?'chip chosen':'chip'} onClick={()=>setRetailer(s)} key={s}><span className={`mini-store store-${s}`}>{retailerName(s)[0]}</span>{retailerName(s)}</button>)}</div><label className="history-toggle"><input type="checkbox" checked={history} onChange={e=>setHistory(e.target.checked)}/> Incluir historial</label></div>
+      <div className="collection-row"><div className="store-chips"><button className={!retailer?'chip chosen':'chip'} aria-pressed={!retailer} onClick={()=>setRetailer('')}>Todas</button>{QUICK_RETAILERS.map(s=><button className={retailer===s?'chip chosen':'chip'} aria-pressed={retailer===s} onClick={()=>setRetailer(s)} key={s}><span className={`mini-store store-${s}`}>{retailerName(s)[0]}</span>{retailerName(s)}</button>)}</div><label className="history-toggle"><input type="checkbox" checked={history} onChange={e=>setHistory(e.target.checked)}/> Incluir historial</label></div>
      </section>
      <div className="price-review-filter"><label><input type="checkbox" checked={showReview} onChange={e=>setShowReview(e.target.checked)}/> Mostrar ofertas con precio por confirmar ({number(reviewCount)})</label><span>Los importes dudosos se ocultan. Los demás son precios publicados por la fuente.</span></div>
      <div className="results-toolbar"><span><strong>{number(filtered.length)}</strong> {loading?'ofertas recibidas coinciden':'ofertas encontradas'}{isFiltered&&<button className="clear-filters" onClick={clear}>Limpiar filtros <X size={12}/></button>}</span><div><ArrowDown size={13}/><select aria-label="Ordenar ofertas" value={sort} onChange={e=>setSort(e.target.value)}><option value="newest">Más recientes</option><option value="discount">Mayor descuento</option><option value="price-asc">Menor precio</option><option value="price-desc">Mayor precio</option></select><span className="view-controls"><button aria-label="Vista de cuadrícula" aria-pressed={view==='grid'} className={view==='grid'?'active':''} onClick={()=>setView('grid')}><LayoutGrid size={16}/></button><button aria-label="Vista de lista" aria-pressed={view==='list'} className={view==='list'?'active':''} onClick={()=>setView('list')}><List size={17}/></button></span></div></div>
