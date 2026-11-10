@@ -137,11 +137,11 @@ html input[type='checkbox'] { accent-color: #776700; }
 .loader-dots span { width: 5px; height: 5px; background: #f4d500; border-radius: 50%; }
 @media (prefers-reduced-motion: reduce) { .initial-loader * { animation: none !important; } }
 
-/* Loading rotates the complete eye; static marks keep their original orientation. */
+/* Only the radar cone rotates; the small white circle and the eye stay fixed. */
 .radar-logo { display: inline-block; flex-shrink: 0; vertical-align: middle; overflow: visible; }
-.radar-logo-animated { transform-origin: center; animation: radar-eye-turn 2.4s linear infinite; }
-@keyframes radar-eye-turn { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .radar-logo-animated { animation: none; } }
+.radar-logo-animated .radar-logo-cone { transform-origin: 50% 50%; transform-box: view-box; animation: radar-cone-turn 2.4s linear infinite; }
+@keyframes radar-cone-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .radar-logo-animated .radar-logo-cone { animation: none; } }
 
 /* Keep account access anchored while the navigation scrolls on shorter screens. */
 .app-shell .sidebar{height:100dvh;overflow:hidden}
