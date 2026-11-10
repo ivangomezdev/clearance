@@ -7,6 +7,7 @@ export type PriceInput = {
   reportedDiscount?: number;
 };
 export type OfferPrice = {
+  verification: 'unverified' | 'reported_mismatch';
   scope?: 'store';
   publishedAmount?: number | null;
   amount: number | null;
@@ -112,7 +113,7 @@ export function assessPrice(input: PriceInput): OfferPrice {
   const title = clarified || review || (quantity !== null && /\$\s*\d/.test(headline))
     ? input.title.replace(/\$\s*\d+(?:,\d{3})*(?:\.\d{1,2})?/g, '').replace(/\s+/g, ' ').trim() || 'Oferta: consultar condiciones'
     : headline;
-  return {amount: review ? null : sale, original: reliableOriginal, discount, quantity,
+  return {verification: 'unverified', amount: review ? null : sale, original: reliableOriginal, discount, quantity,
     unitPrice: !review && quantity && sale !== null ? Math.round(sale / quantity * 100) / 100 : null,
     conditions, review, clarified, reason, title};
 }

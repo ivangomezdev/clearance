@@ -219,3 +219,6 @@ html input[type='checkbox'] { accent-color: #776700; }
 .local-offer-price .detail-price{flex-wrap:wrap}
 .local-price-note{font-size:11px;line-height:1.7;color:#777b6b;margin:8px 0 14px}
 .local-price-warning{font-size:12px;line-height:1.7;color:#83611e;background:#fff8dd;border:1px solid #eadba5;border-radius:7px;padding:11px 13px;margin:12px 0 18px}
+
+.published-price-label{font-size:10px;line-height:1.6;color:#777b6b;margin:12px 0 5px}
+.detail-info .published-price-label{font-size:11px;margin-top:18px}

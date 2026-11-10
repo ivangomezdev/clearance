@@ -5,6 +5,7 @@ const money = (n: number) => new Intl.NumberFormat('en-US', {style: 'currency', 
 export function OfferPriceDisplay({value, detail = false}: {value: OfferPrice; detail?: boolean}) {
   const notes = priceSummary(value);
   return <div className={value.review ? 'offer-pricing price-review' : 'offer-pricing'}>
+    {!value.review && value.scope !== 'store' && <p className="published-price-label">Precio publicado · sin verificar en el comercio</p>}
     <div className={detail ? 'detail-price' : 'prices'}>
       <strong>{value.scope === 'store' ? 'Precio por tienda' : value.amount === null ? 'Consultar precio' : value.amount === 0 ? 'Ver condiciones' : money(value.amount)}</strong>
       {value.original !== null && <del>{money(value.original)}</del>}
