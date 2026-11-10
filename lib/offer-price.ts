@@ -7,6 +7,8 @@ export type PriceInput = {
   reportedDiscount?: number;
 };
 export type OfferPrice = {
+  scope?: 'store';
+  publishedAmount?: number | null;
   amount: number | null;
   original: number | null;
   discount: number | null;
@@ -117,6 +119,7 @@ export function assessPrice(input: PriceInput): OfferPrice {
 
 export function priceSummary(p: OfferPrice): string[] {
   return [
+    ...(p.scope === 'store' ? ['El precio depende de la sucursal. Consulta precio y existencias en tu zona.'] : []),
     ...(p.review ? ['Precio por confirmar', p.reason!] : p.quantity ? [`Total por ${p.quantity} unidades · según publicación`, `≈ ${currency(p.unitPrice!)} por unidad`] : []),
     ...p.conditions,
     ...(p.clarified ? ['Total aclarado con la descripción; sin verificar en la tienda.'] : []),

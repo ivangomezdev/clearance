@@ -5,10 +5,11 @@ export function price(value: unknown): number | null { if(value === null || valu
 const assessed = new WeakMap<Deal, OfferPrice>();
 export function dealPrice(d: Deal) {
  let result=assessed.get(d);
- if(!result){result=assessPrice({title:d.title||'',headline:d.headline,description:(d.dealContent||'')+(d.promoCode||d.promoCodes?.length?' Coupon requerido':''),amount:d.discountedPrice,original:d.originalPrice,reportedDiscount:d.discountOff===null?undefined:Number(d.discountOff)*100});assessed.set(d,result);}
+ if(!result){result=assessPrice({title:d.title||'',headline:d.headline,description:(d.dealContent||'')+(d.promoCode||d.promoCodes?.length?' Coupon requerido':''),amount:d.discountedPrice,original:d.originalPrice,reportedDiscount:d.discountOff===null?undefined:Number(d.discountOff)*100});if(isStoreOffer(d))result={...result,scope:'store',publishedAmount:result.amount,amount:null,original:null,discount:null};assessed.set(d,result);}
  return result;
 }
 export function discount(d: Deal) { return dealPrice(d).discount ?? 0; }
+export function isStoreOffer(d: Deal) { return d.kind === 'in_store' || d.source === 'feed'; }
 export function dealSku(d: Deal): string | undefined {
  if(d.retailer!=='home_depot')return;
  if(d.sku&&validHomeDepotSku(d.sku))return d.sku;

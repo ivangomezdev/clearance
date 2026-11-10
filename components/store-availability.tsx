@@ -2,11 +2,11 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {ArrowUpRight, MapPin, RefreshCw} from 'lucide-react';
-import {validHomeDepotSku, validZip} from '../lib/store-stock';
+import {storeHasStock, validHomeDepotSku, validZip} from '../lib/store-stock';
 import type {StockResults} from '../lib/store-stock';
 import {browserStorage, cacheStock, cachedStock, lookupStock, rememberZip, rememberedZip, rememberStockCooldown, stockCooldown, StockLookupError} from '../lib/store-availability-client';
 
-export function StoreAvailability({sku}: {sku?: string}) {
+export function StoreAvailability({sku, onResultChange}: {sku?: string; onResultChange?(result: StockResults | null): void}) {
   const [zip, setZip] = useState('');
   const [result, setResult] = useState<StockResults | null>(null);
   const [error, setError] = useState(''), [loading, setLoading] = useState(false);
@@ -14,6 +14,7 @@ export function StoreAvailability({sku}: {sku?: string}) {
   const [cooldown, setCooldown] = useState(0), [canManage, setCanManage] = useState(false);
   const request = useRef<AbortController | null>(null);
   const busy = useRef(false);
+  useEffect(() => {onResultChange?.(loading || error ? null : result);}, [result, loading, error, onResultChange]);
   const consult = useCallback(async (postalCode: string, force = false) => {
     if (!sku || !validHomeDepotSku(sku) || !validZip(postalCode)) return;
     if (busy.current) return;
@@ -57,8 +58,8 @@ export function StoreAvailability({sku}: {sku?: string}) {
     const timer = setInterval(refresh, 1000); return () => clearInterval(timer);
   }, [retryAt]);
   if (!sku || !validHomeDepotSku(sku)) return <p className="buy-note">No hay un número de producto disponible para buscar tiendas.</p>;
-  const stores = result?.stores.filter(store => showEmpty || store.inStock) || [];
-  const available = result?.stores.filter(store => store.inStock).length || 0;
+  const stores = result?.stores.filter(store => showEmpty || storeHasStock(store)) || [];
+  const available = result?.stores.filter(storeHasStock).length || 0;
   return <section className="store-availability" aria-label="Disponibilidad por tienda">
     <h3><MapPin size={17}/> Encuéntralo en Home Depot</h3>
     <form onSubmit={event => {event.preventDefault(); if (!validZip(zip)) {setError('Introduce un código postal de Estados Unidos de 5 dígitos.'); return;} void consult(zip, !!result);}}>
@@ -77,7 +78,7 @@ export function StoreAvailability({sku}: {sku?: string}) {
       <div className="stock-store-list">{stores.map(store => <article className="stock-store" key={store.storeId}>
         <div className="stock-store-heading"><strong>{store.name}</strong>{store.price !== null && <strong>{new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(store.price)}</strong>}</div>
         <p>{store.address || `Sucursal ${store.storeId}`}</p>
-        <p>{store.distance !== null && `${store.distance.toFixed(1)} mi · `}{store.inStock ? store.quantity !== null ? `${store.quantity} en existencia` : 'Con existencias' : 'Sin existencias'}{store.itemLocation && ` · ${store.itemLocation}`}</p>
+        <p>{store.distance !== null && `${store.distance.toFixed(1)} mi · `}{storeHasStock(store) ? store.quantity !== null ? `${store.quantity} en existencia` : 'Con existencias' : 'Sin existencias'}{store.itemLocation && ` · ${store.itemLocation}`}</p>
         <a href={store.productUrl} target="_blank" rel="noopener noreferrer">Ver producto en esta tienda <ArrowUpRight size={15}/></a>
       </article>)}</div>
       <p className="buy-note">El producto se abre en otra pestaña; aquí se conservan tu código postal y la consulta. Precios y existencias finales en Home Depot.</p>

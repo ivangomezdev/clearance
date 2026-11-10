@@ -10,6 +10,7 @@ export type StoreStock = {
   productUrl: string;
 };
 export type StockResults = {sku: string; zip: string; stores: StoreStock[]; checkedAt: string};
+export function storeHasStock(store: StoreStock) {return store.inStock && store.quantity !== 0;}
 
 export function validZip(value: string) { return /^\d{5}$/.test(value); }
 export function validHomeDepotSku(value: string) { return /^\d{9}$/.test(value); }

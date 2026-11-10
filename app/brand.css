@@ -210,3 +210,12 @@ html input[type='checkbox'] { accent-color: #776700; }
 @media(max-width:760px){.auth-page{padding:20px 18px 36px}.auth-layout{grid-template-columns:1fr;min-height:0}.auth-intro{padding:26px}.auth-brand{font-size:19px}.auth-brand strong{font-size:23px}.auth-brand>.radar-logo{width:44px;height:44px}.auth-intro>.auth-eyebrow{margin-top:26px;font-size:9px}.auth-intro h1{font-size:31px;margin-bottom:8px}.auth-intro h1 br{display:none}.auth-intro h1 br::after{content:' '}.auth-intro>p{display:none}.auth-art{width:150px;height:150px;right:-30px;bottom:-55px;opacity:.35}.auth-art>.radar-logo{width:110px;height:110px}.auth-card{padding:30px 25px}.auth-card h2{font-size:25px}.auth-card input{font-size:16px}}
 
 @media(max-width:650px){.topbar-right>.account-avatar{display:none}}
+
+/* A community in-store price is a reference, never a local purchase price. */
+.offer-pricing:has(.published-price) .prices strong{font-size:17px}
+.published-price{font-size:11px;color:#777b6b;line-height:1.65;margin:8px 0 12px}
+.local-price-label{font-size:10px;font-weight:650;color:#777b6b;line-height:1.6;margin:17px 0 4px}
+.local-offer-price .local-price-status strong{font-size:21px;letter-spacing:-.5px;line-height:1.45}
+.local-offer-price .detail-price{flex-wrap:wrap}
+.local-price-note{font-size:11px;line-height:1.7;color:#777b6b;margin:8px 0 14px}
+.local-price-warning{font-size:12px;line-height:1.7;color:#83611e;background:#fff8dd;border:1px solid #eadba5;border-radius:7px;padding:11px 13px;margin:12px 0 18px}
