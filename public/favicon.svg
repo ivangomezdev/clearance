@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="17" fill="#f4d500"/><g stroke="#181914" fill="none" stroke-width="3.2" stroke-linecap="round"><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="11"/><path d="M32 32 47 17"/></g><circle cx="32" cy="32" r="3.5" fill="#181914"/><circle cx="47" cy="17" r="4" fill="#181914"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280">
+  <g id="radar-base">
+    <circle cx="140" cy="140" r="135" fill="#070000"/>
+    <circle cx="140" cy="140" r="120" fill="#fbb701"/>
+    <circle cx="140" cy="140" r="58" fill="#000"/>
+  </g>
+  <g id="radar-sweep">
+    <path d="M149 140Q142 140 146 134L209 42A120 120 0 0 1 260 140Z" fill="#ffcb3d"/>
+    <path d="M149 140Q142 140 146 134L173.4 92.6A58 58 0 0 1 198 140Z" fill="#7a7a7a"/>
+  </g>
+  <circle id="radar-dot" cx="88" cy="166" r="26.5" fill="#fff"/>
+</svg>

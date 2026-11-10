@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Radar,LayoutGrid,Bookmark,Activity,ArrowUpRight,ArrowDown,Search,SlidersHorizontal,RefreshCw,Download,ChevronLeft,ChevronRight,X,Check,Copy,Store,Tag,Package,Clock,ExternalLink,Code2,AlertCircle,List,Filter,ArrowRight} from 'lucide-react';
+import {LayoutGrid,Bookmark,Activity,ArrowUpRight,ArrowDown,Search,SlidersHorizontal,RefreshCw,Download,ChevronLeft,ChevronRight,X,Check,Copy,Store,Tag,Package,Clock,ExternalLink,Code2,AlertCircle,List,Filter,ArrowRight} from 'lucide-react';
 import {browserStorage} from '../lib/store-availability-client';
 import {InitialLoader} from '../components/initial-loader';
 import {rememberOpenDeal, restoredDeal} from '../lib/deal-navigation';
@@ -14,6 +14,7 @@ import {StaffPicks} from '../components/staffspicks';
 import {StoreAvailability} from '../components/store-availability';
 import {DiscordSource} from '../components/discord-source';
 import {RetailerLogo} from '../components/retailer-logo';
+import {RadarLogo} from '../components/radar-logo';
 import {Deal,dealPrice,dealSku,discount,expired,retailerName,safeUrl,sourceUrl} from '../lib/deals';
 
 type Log=CatalogLog&{id:number};
@@ -88,7 +89,7 @@ export default function Dashboard(){
  if(showInitialLoader)return <InitialLoader/>;
  return <div className="app-shell">
   <aside className="sidebar">
-   <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><img src="/favicon.svg?v=yellow-2" width="44" height="44" alt=""/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
+   <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><RadarLogo size={44}/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
    <div className="workspace-label">TU OBSERVATORIO DE OFERTAS</div>
    <nav aria-label="Navegación principal">
     <button className={section==='staffspicks'?'nav-item selected':'nav-item'} onClick={()=>setSection('staffspicks')}><Tag size={18}/> staffspicks</button>
@@ -98,10 +99,10 @@ export default function Dashboard(){
    </nav>
    <div className="sidebar-divider"/><div className="workspace-label">TIENDAS EN EL RADAR</div>
    <div className="store-nav">{stores.filter(([s])=>QUICK_RETAILERS.some(store=>store===s)).map(([s,n])=><button className={retailer===s?'store-selected':''} key={s} onClick={()=>{setRetailer(s);setSection('offers');}}><RetailerLogo retailer={s} className="store-symbol"/><span>{retailerName(s)}</span><small>{number(n)}</small></button>)}</div>
-   <div className="sidebar-bottom"><div className="source-card"><span className="source-icon"><RadioMark/></span><strong>Tu próximo gran hallazgo</strong><p>Descubre más.<br/>Paga menos.</p></div><div className="profile"><span>LR</span><div>Mi espacio personal<small>Clearance Radar</small></div><span className="profile-dot"/></div></div>
+   <div className="sidebar-bottom"><div className="source-card"><span className="source-icon"><RadarLogo size={24}/></span><strong>Tu próximo gran hallazgo</strong><p>Descubre más.<br/>Paga menos.</p></div><div className="profile"><span>LR</span><div>Mi espacio personal<small>Clearance Radar</small></div><span className="profile-dot"/></div></div>
   </aside>
   <div className="main-shell"><header className="topbar"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/><strong>{section==='staffspicks'?'Staff Picks':section==='saved'?'Guardadas':section==='network'?'Actividad de API':'Explorar ofertas'}</strong></div><div className="topbar-right"><span className={`connection ${section!=='staffspicks'&&error?'warning':''}`}><i/>{section==='staffspicks'?'Staff Picks':error?'Conexión interrumpida':loading?'Sincronizando API':updated?'API conectada':'Carga parcial'}</span><span className="currency">USD</span><span className="avatar">LR</span></div></header>
-   <main>{section==='staffspicks'?<StaffPicks/>:<><div className="title-row"><div><div className="eyebrow"><span/> ENCUENTRA MÁS. PAGA MENOS.</div><h1>{section==='saved'?'Tus mejores hallazgos.':section==='network'?'Del origen a tu radar.':'Todas las ofertas. Un solo lugar.'}</h1><p className="subtitle">{section==='saved'?'Las ofertas que guardaste, siempre a mano en este navegador.':section==='network'?'Consulta la actividad de carga de tus ofertas.':'Explora, compara y encuentra tu próximo gran descuento.'}</p></div><button className="primary sync" onClick={()=>sync(history)} disabled={loading}><RefreshCw size={16} className={loading?'spin':''}/>{loading?'Sincronizando':'Sincronizar'}</button></div>
+   <main>{section==='staffspicks'?<StaffPicks/>:<><div className="title-row"><div><div className="eyebrow"><span/> ENCUENTRA MÁS. PAGA MENOS.</div><h1>{section==='saved'?'Tus mejores hallazgos.':section==='network'?'Del origen a tu radar.':'Todas las ofertas. Un solo lugar.'}</h1><p className="subtitle">{section==='saved'?'Las ofertas que guardaste, siempre a mano en este navegador.':section==='network'?'Consulta la actividad de carga de tus ofertas.':'Explora, compara y encuentra tu próximo gran descuento.'}</p></div><button className="primary sync" onClick={()=>sync(history)} disabled={loading}><RadarLogo size={20} animated={loading}/>{loading?'Sincronizando':'Sincronizar'}</button></div>
     <div className="session-line"><span>{sessionInfo.status==='active'?'Consulta tiendas con tu código postal':'Ofertas disponibles'}</span>{canManageInventory&&<a href="/settings/inventory" target="_blank" rel="noopener noreferrer">{sessionInfo.status==='active'?'Administrar inventario':'Restablecer inventario'}</a>}{feedAdded>0&&<span>+{number(feedAdded)} ofertas en tienda</span>}{feedLocked>0&&<span>{feedLocked} ofertas restringidas por el origen</span>}</div>
     {loading&&<div className="progress-track"><div style={{width:`${progress.pages?progress.done/progress.pages*100:2}%`}}/></div>}
     {error&&<div className="error-banner"><AlertCircle size={18}/><span>{publicCopy(error)} Se conservan las {number(deals.length)} ofertas recibidas.</span><button onClick={()=>sync(history)}>Reintentar</button></div>}
@@ -118,7 +119,7 @@ export default function Dashboard(){
      {!visible.length&&<div className="empty-state"><Search size={35}/><h2>{loading?'Buscando ofertas en el origen…':section==='saved'?'Tu colección empieza aquí':'No hay ofertas con estos filtros'}</h2><p>{section==='saved'?'Guarda un producto con el marcador para encontrarlo aquí. Solo se muestran favoritos presentes en el catálogo cargado.':'Prueba otra búsqueda o incluye el historial para ver ofertas anteriores.'}</p>{isFiltered&&<button className="primary" onClick={clear}>Restablecer filtros</button>}</div>}
      <div className="pagination"><span>{filtered.length?`${(current-1)*24+1}–${Math.min(current*24,filtered.length)} de ${number(filtered.length)}`:'0 resultados'}</span><div><button aria-label="Página anterior" disabled={current<=1} onClick={()=>setPage(current-1)}><ChevronLeft size={16}/></button><span>Página {current} de {pages}</span><button aria-label="Página siguiente" disabled={current>=pages} onClick={()=>setPage(current+1)}><ChevronRight size={16}/></button></div></div>
     </>}
-    <footer className="main-footer"><span><Radar size={14}/> Clearance Radar · Tus mejores hallazgos</span><span>Precios en USD · Disponibilidad y precio final en la tienda</span></footer>
+    <footer className="main-footer"><span><RadarLogo size={20}/> Clearance Radar · Tus mejores hallazgos</span><span>Precios en USD · Disponibilidad y precio final en la tienda</span></footer>
    </>}
    </main>
   </div>
@@ -129,5 +130,4 @@ export default function Dashboard(){
   {toast&&<div className="toast" role="status"><Check size={17}/>{toast}</div>}
  </div>;
 }
-function RadioMark(){return <Activity size={19}/>;}
 

@@ -14,7 +14,7 @@ html input[type='checkbox'] { accent-color: #776700; }
 }
 .app-shell .brand { color: #faf8ec; gap: 12px; }
 .app-shell .brand-icon { width: 44px; height: 44px; background: transparent; border-radius: 12px; }
-.brand-icon img { display: block; width: 100%; height: 100%; }
+.brand-icon .radar-logo { display: block; width: 100%; height: 100%; }
 .app-shell .brand-bottom { color: var(--brand-yellow); }
 .app-shell .brand-dot { color: #f5f3e8; }
 .sidebar .workspace-label { color: #a4a794; letter-spacing: 1.2px; }
@@ -131,9 +131,9 @@ html input[type='checkbox'] { accent-color: #776700; }
 .initial-loader::before { content: ''; position: absolute; width: min(840px, 140vw); aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: repeating-radial-gradient(circle, transparent 0 109px, #f4d50012 110px 111px); }
 .loader-content { position: relative; text-align: center; }
 .loader-orbit { position: relative; width: 154px; height: 154px; display: grid; place-items: center; margin: 0 auto 28px; }
-.loader-orbit img { border-radius: 25px; box-shadow: 0 0 70px #f4d5001f; animation: loader-breathe 2.4s ease-in-out infinite; }
-.loader-ring { position: absolute; inset: 0; border: 1px solid #f4d50030; border-top: 2px solid #f4d500; border-right: 2px solid #f4d500; border-radius: 50%; animation: loader-turn 2s linear infinite; }
-.loader-ring::after { content: ''; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #ffe329; top: 19px; right: 16px; box-shadow: 0 0 15px #f4d5008f; }
+.loader-orbit > .radar-logo { filter: drop-shadow(0 0 28px #fbb70124); }
+.loader-orbit::before, .loader-orbit::after { content: ''; position: absolute; inset: 0; border: 1px solid #fbb70130; border-radius: 50%; pointer-events: none; }
+.loader-orbit::after { inset: -15px; border-color: #fbb70115; }
 .loader-brand { color: #f5f3e8; font: 800 22px Manrope, sans-serif; letter-spacing: -.8px; }
 .loader-brand span { color: #f4d500; }
 .initial-loader h1 { font: 550 clamp(20px, 3vw, 27px)/1.5 'DM Sans', sans-serif; letter-spacing: -.5px; color: #c9cbbb; margin: 20px auto 24px; max-width: 100%; }
@@ -141,7 +141,11 @@ html input[type='checkbox'] { accent-color: #776700; }
 .loader-dots span { width: 5px; height: 5px; background: #f4d500; border-radius: 50%; animation: loader-dot 1.4s ease-in-out infinite; }
 .loader-dots span:nth-child(2) { animation-delay: .18s; }
 .loader-dots span:nth-child(3) { animation-delay: .36s; }
-@keyframes loader-turn { to { transform: rotate(360deg); } }
-@keyframes loader-breathe { 50% { transform: scale(.96); box-shadow: 0 0 85px #f4d50033; } }
 @keyframes loader-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .initial-loader * { animation: none !important; } }
+
+/* All Clearance Radar marks share the supplied artwork, including the loading sweep. */
+.radar-logo { display: inline-block; flex-shrink: 0; vertical-align: middle; overflow: visible; }
+.radar-logo-animated .radar-logo-sweep { transform-origin: 50% 50%; transform-box: view-box; animation: radar-scan 2.4s linear infinite; }
+@keyframes radar-scan { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .radar-logo-animated .radar-logo-sweep { animation: none; } }

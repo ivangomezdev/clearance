@@ -1,7 +1,8 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
-import {ArrowLeft, CheckCircle2, Link2, RefreshCw} from 'lucide-react';
+import {RadarLogo} from './radar-logo';
+import {ArrowLeft, CheckCircle2, RefreshCw} from 'lucide-react';
 import {hiddenClearancesBookmark} from '../lib/hc-session-bridge';
 import {createHcOwnerClient} from '../lib/hc-owner-client';
 import type {SessionInfo} from '../lib/hc-session';
@@ -90,7 +91,7 @@ export function SessionConnection() {
   }
   return <main className="connection-page">
     <a className="connection-back" href="/"><ArrowLeft size={16}/> Volver a las ofertas</a>
-    <div className="connection-card"><span className="connection-symbol"><Link2 size={26}/></span>
+    <div className="connection-card"><span className="connection-symbol"><RadarLogo size={42}/></span>
       <h1>Conexión de inventario</h1>
       <p>Administración del propietario. Los visitantes solo introducen su ZIP para consultar tiendas; la conexión se mantiene en el servidor.</p>
       {canManage === null ? <p role="status">Comprobando acceso…</p> : !canManage ? hasSetup ? <div className="connection-ready"><h2>Autoriza tu navegador</h2><p>Este enlace privado habilita la administración del inventario. Confirma en el mismo navegador donde usarás la cuenta de inventario.</p><button className="primary" disabled={busy} onClick={authorizeOwner}>{busy ? <><RefreshCw size={16} className="spin"/> Autorizando…</> : 'Autorizar este navegador'}</button></div> : <p className="connection-hint">Esta sección requiere el enlace privado del propietario. Para buscar tiendas, vuelve a las ofertas e introduce tu ZIP.</p>
