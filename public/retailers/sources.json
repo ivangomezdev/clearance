@@ -1,0 +1,56 @@
+[
+  {
+    "store": "home_depot",
+    "file": "home_depot.ico",
+    "source": "https://www.homedepot.com/favicon.ico",
+    "bytes": 3638
+  },
+  {
+    "store": "walmart",
+    "file": "walmart.ico",
+    "source": "https://www.walmart.com/favicon.ico",
+    "bytes": 15086
+  },
+  {
+    "store": "amazon",
+    "file": "amazon.ico",
+    "source": "https://www.amazon.com/favicon.ico",
+    "bytes": 15086
+  },
+  {
+    "store": "woot",
+    "file": "woot.ico",
+    "source": "https://www.woot.com/favicon.ico",
+    "bytes": 15086
+  },
+  {
+    "store": "target",
+    "file": "target.png",
+    "source": "https://www.target.com/favicon.ico",
+    "bytes": 4655
+  },
+  {
+    "store": "discord",
+    "file": "discord.png",
+    "source": "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/62fddf0fde45a8baedcc7ee5_847541504914fd33810e70a0ea73177e%20(2)-1.png",
+    "bytes": 557
+  },
+  {
+    "store": "best_buy",
+    "file": "best_buy.ico",
+    "source": "https://www.bestbuy.com/favicon.ico",
+    "bytes": 4414
+  },
+  {
+    "store": "costco",
+    "file": "costco.svg",
+    "source": "https://www.costco.com/favicon.ico",
+    "bytes": 756
+  },
+  {
+    "store": "lowes",
+    "file": "lowes.ico",
+    "source": "https://www.lowes.com/favicon.ico",
+    "bytes": 1150
+  }
+]
