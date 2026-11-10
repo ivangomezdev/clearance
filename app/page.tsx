@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Radar,LayoutGrid,Bookmark,Activity,ArrowUpRight,ArrowDown,Search,SlidersHorizontal,RefreshCw,Download,ChevronLeft,ChevronRight,X,Check,Copy,Store,Tag,Package,Clock,ExternalLink,Code2,Pause,CheckCircle2,AlertCircle,List,Filter,ArrowRight} from 'lucide-react';
+import {Radar,LayoutGrid,Bookmark,Activity,ArrowUpRight,ArrowDown,Search,SlidersHorizontal,RefreshCw,Download,ChevronLeft,ChevronRight,X,Check,Copy,Store,Tag,Package,Clock,ExternalLink,Code2,AlertCircle,List,Filter,ArrowRight} from 'lucide-react';
 import {browserStorage} from '../lib/store-availability-client';
 import {InitialLoader} from '../components/initial-loader';
 import {rememberOpenDeal, restoredDeal} from '../lib/deal-navigation';
@@ -22,14 +22,14 @@ const date=(s:string)=>new Date(s).toLocaleString('es-MX',{timeZone:'America/Can
 export default function Dashboard(){
  const [initialPending,setInitialPending]=useState(true),[initialDelayDone,setInitialDelayDone]=useState(false),[navigationReady,setNavigationReady]=useState(false);
  const showInitialLoader=initialPending||!initialDelayDone;
- const [hiddenDeals,setDeals]=useState<Deal[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[total,setTotal]=useState(0),[progress,setProgress]=useState({done:0,pages:0}),[updated,setUpdated]=useState(''),[waiting,setWaiting]=useState('');
+ const [hiddenDeals,setDeals]=useState<Deal[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[total,setTotal]=useState(0),[progress,setProgress]=useState({done:0,pages:0}),[updated,setUpdated]=useState('');
  const [canManageInventory,setCanManageInventory]=useState(false);
  const [sessionInfo,setSessionInfo]=useState<SessionInfo>({status:'public'}),[feedAdded,setFeedAdded]=useState(0),[feedLocked,setFeedLocked]=useState(0);
  const [discordDeals,setDiscordDeals]=useState<Deal[]>([]);
  const deals=useMemo(()=>[...hiddenDeals,...discordDeals],[hiddenDeals,discordDeals]);
  const receiveDiscord=useCallback((data:Deal[],channelId:string,replace:boolean)=>setDiscordDeals(prev=>{const m=new Map((replace?prev.filter(d=>d.channelId!==channelId):prev).map(d=>[d.id,d]));data.forEach(d=>m.set(d.id,d));return [...m.values()];}),[]);
- const [showReview,setShowReview]=useState(false),[section,setSection]=useState('offers'),[query,setQuery]=useState(''),[retailer,setRetailer]=useState(''),[minDiscount,setMinDiscount]=useState(0),[status,setStatus]=useState('all'),[sort,setSort]=useState('newest'),[tag,setTag]=useState(''),[maxPrice,setMaxPrice]=useState(''),[history,setHistory]=useState(false),[auto,setAuto]=useState(false),[more,setMore]=useState(false),[view,setView]=useState('grid'),[page,setPage]=useState(1);
- const [favorites,setFavorites]=useState<string[]>([]),[selected,setSelected]=useState<Deal|null>(null),[redirect,setRedirect]=useState<{redirectUrl:string;affiliateProvider?:string}|null>(null),[redirectError,setRedirectError]=useState(''),[resolving,setResolving]=useState(false),[toast,setToast]=useState(''),[logs,setLogs]=useState<Log[]>([]),[stopped,setStopped]=useState(false);
+ const [showReview,setShowReview]=useState(false),[section,setSection]=useState('offers'),[query,setQuery]=useState(''),[retailer,setRetailer]=useState(''),[minDiscount,setMinDiscount]=useState(0),[status,setStatus]=useState('all'),[sort,setSort]=useState('newest'),[tag,setTag]=useState(''),[maxPrice,setMaxPrice]=useState(''),[history,setHistory]=useState(false),[more,setMore]=useState(false),[view,setView]=useState('grid'),[page,setPage]=useState(1);
+ const [favorites,setFavorites]=useState<string[]>([]),[selected,setSelected]=useState<Deal|null>(null),[redirect,setRedirect]=useState<{redirectUrl:string;affiliateProvider?:string}|null>(null),[redirectError,setRedirectError]=useState(''),[resolving,setResolving]=useState(false),[toast,setToast]=useState(''),[logs,setLogs]=useState<Log[]>([]);
  const controller=useRef<AbortController|null>(null),run=useRef(0),logId=useRef(0),dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const timer=setTimeout(()=>setInitialDelayDone(true),4000);return()=>clearTimeout(timer);},[]);
  useEffect(()=>{const saved=restoredDeal(browserStorage('sessionStorage'));if(saved)setSelected(saved);setNavigationReady(true);},[]);
@@ -40,7 +40,7 @@ export default function Dashboard(){
  const record=useCallback((entry:Omit<Log,'id'>)=>setLogs(prev=>[{...entry,id:++logId.current},...prev].slice(0,600)),[]);
  const sync=useCallback(async(includeHistory:boolean)=>{
    controller.current?.abort();const c=new AbortController();controller.current=c;const token=++run.current;
-   setLoading(true);setError('');setWaiting('');setStopped(false);setDeals([]);setTotal(0);setProgress({done:0,pages:0});setUpdated('');setLogs([]);setFeedAdded(0);setFeedLocked(0);
+   setLoading(true);setError('');setDeals([]);setTotal(0);setProgress({done:0,pages:0});setUpdated('');setLogs([]);setFeedAdded(0);setFeedLocked(0);
    const collected=new Map<string,Deal>();let completed=0;
    const pause=(ms:number)=>new Promise<void>((resolve,reject)=>{if(c.signal.aborted){reject(new DOMException('Aborted','AbortError'));return;}const abort=()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));};const timer=setTimeout(()=>{c.signal.removeEventListener('abort',abort);resolve();},ms);c.signal.addEventListener('abort',abort,{once:true});});
    async function getPage(p:number,attempt=0):Promise<number>{
@@ -48,7 +48,7 @@ export default function Dashboard(){
      let r:Response;try{r=await fetch(`/api/deals?page=${p}&activeOnly=${!includeHistory}`,{signal:c.signal});}catch(e){if(!c.signal.aborted)record({path,status:0,ms:Math.round(performance.now()-t),count:0,time:new Date().toISOString(),error:'Error de conexión'});throw e;}
      const body=await r.json() as CatalogResponse;if(c.signal.aborted||token!==run.current)throw new DOMException('Aborted','AbortError');if(body.session)setSessionInfo(body.session);
      record({path,status:r.status,ms:Math.round(performance.now()-t),count:Array.isArray(body.data)?body.data.length:0,time:new Date().toISOString(),pagination:body.pagination,error:body.error});
-     if(r.status===429&&attempt<3){const header=r.headers.get('retry-after');const seconds=header?(Number.isFinite(Number(header))?Number(header):Math.max(0,(Date.parse(header)-Date.now())/1000)):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);setWaiting(`Límite de la API · reanudación en ${Math.ceil(delay)} s`);await pause(delay*1000);setWaiting('');return getPage(p,attempt+1);}
+     if(r.status===429&&attempt<3){const header=r.headers.get('retry-after');const seconds=header?(Number.isFinite(Number(header))?Number(header):Math.max(0,(Date.parse(header)-Date.now())/1000)):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);await pause(delay*1000);return getPage(p,attempt+1);}
      if(!r.ok||body.success===false)throw new Error(r.status===429?'La API limitó las solicitudes. Espera un momento y vuelve a sincronizar.':body.error||`Error HTTP ${r.status}`);
      if(!Array.isArray(body.data)||!body.pagination||!Number.isInteger(body.pagination.totalPages))throw new Error('El formato de la API ha cambiado.');
      validatePage(p,body.pagination.page);
@@ -62,13 +62,13 @@ export default function Dashboard(){
      if(!c.signal.aborted){
       let feedPages=1,added=0,locked=0;
       for(let p=1;p<=feedPages;p++){
-       await pause(1250);setWaiting(`Comprobando ofertas en tienda · página ${p} de ${feedPages}`);
+       await pause(1250);
        let body:CatalogResponse|undefined;
        for(let attempt=0;attempt<4;attempt++){
         const t=performance.now(),r=await fetch(`/api/feed?page=${p}`,{signal:c.signal});body=await r.json() as CatalogResponse;
         if(c.signal.aborted||token!==run.current)throw new DOMException('Aborted','AbortError');
         record({path:`/api/v1/feed?limit=50&page=${p}`,status:r.status,ms:Math.round(performance.now()-t),count:body.data?.length||0,time:new Date().toISOString(),pagination:body.pagination,error:body.error});
-        if(r.status===429&&attempt<3){const h=r.headers.get('retry-after'),seconds=h?(Number.isFinite(Number(h))?Number(h):(Date.parse(h)-Date.now())/1000):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);setWaiting(`Pausa del feed · reanudación en ${Math.ceil(delay)} s`);await pause(delay*1000);continue;}
+        if(r.status===429&&attempt<3){const h=r.headers.get('retry-after'),seconds=h?(Number.isFinite(Number(h))?Number(h):(Date.parse(h)-Date.now())/1000):65;const delay=Math.max(65,Number.isFinite(seconds)?seconds:65);await pause(delay*1000);continue;}
         if(!r.ok||body.success===false)throw Error(body.error||`Error del feed HTTP ${r.status}`);break;
        }
        if(!body||!Array.isArray(body.data)||!body.pagination||!Number.isInteger(body.pagination.totalPages))throw Error('El formato del feed ha cambiado.');
@@ -76,14 +76,12 @@ export default function Dashboard(){
        for(const d of body.data){if(!collected.has(d.id)){collected.set(d.id,d);added++;}}
        locked+=body.lockedSkipped||0;setDeals([...collected.values()]);setFeedAdded(added);setFeedLocked(locked);
       }
-      setWaiting('');
      }
      if(token===run.current&&!c.signal.aborted)setUpdated(new Date().toISOString());
    }catch(e){if(token===run.current&&!c.signal.aborted){setError(e instanceof Error?e.message:'Error al sincronizar');c.abort();}}
    finally{if(token===run.current){setLoading(false);setInitialPending(false);}}
  },[record]);
  useEffect(()=>{sync(history);return()=>controller.current?.abort();},[history,sync]);
- useEffect(()=>{if(!auto)return;const t=setInterval(()=>{if(!document.hidden&&!loading)sync(history);},300000);return()=>clearInterval(t);},[auto,history,loading,sync]);
  useEffect(()=>{setPage(1);},[query,retailer,minDiscount,status,sort,tag,maxPrice,section,showReview]);
  useEffect(()=>{
    if(showInitialLoader)return;
@@ -110,10 +108,10 @@ export default function Dashboard(){
  },[deals,query,retailer,minDiscount,status,sort,tag,maxPrice,section,favorites,showReview]);
  const reviewCount=deals.filter(d=>d.source!=='discord'&&dealPrice(d).review).length;
  const selectedPrice=selected?dealPrice(selected):null;
- const pages=Math.max(1,Math.ceil(filtered.length/24)),current=Math.min(page,pages),visible=filtered.slice((current-1)*24,current*24),active=hiddenDeals.filter(d=>!expired(d)).length,high=deals.filter(d=>discount(d)>=70).length;
+ const pages=Math.max(1,Math.ceil(filtered.length/24)),current=Math.min(page,pages),visible=filtered.slice((current-1)*24,current*24);
  const toggleFavorite=(id:string)=>setFavorites(prev=>{const next=prev.includes(id)?prev.filter(x=>x!==id):[...prev,id];try{localStorage.setItem('radar-favorites',JSON.stringify(next));}catch{setToast('No se pudo guardar en este navegador.');}return next;});
  const clear=()=>{setShowReview(false);setQuery('');setRetailer('');setMinDiscount(0);setTag('');setMaxPrice('');setStatus('all');};
- const exportData=()=>{const blob=new Blob([JSON.stringify({source:'Clearance Radar',exportedAt:new Date().toISOString(),discordSource:'Discord (sesión, carga independiente)',discordCount:discordDeals.length,currency:'USD',complete:discordDeals.length===0&&!!updated&&!error&&!stopped,discordScope:"Solo mensajes cargados en esta sesión; no implica historial completo",received:hiddenDeals.length,apiTotal:total,inStoreAdded:feedAdded,restrictedFeedItems:feedLocked,includeHistory:history,deals:filtered.map(d=>({id:d.id,title:publicCopy(dealPrice(d).title),description:publicCopy(d.dealContent),retailer:retailerName(d.retailer),createdAt:d.createdAt,expiresAt:d.expiresAt,displayPrice:d.source==='discord'?null:{...dealPrice(d),title:publicCopy(dealPrice(d).title)}}))},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='clearance-radar.json';a.click();URL.revokeObjectURL(u);setToast(`${number(filtered.length)} ofertas exportadas`);};
+ const exportData=()=>{const blob=new Blob([JSON.stringify({source:'Clearance Radar',exportedAt:new Date().toISOString(),discordSource:'Discord (sesión, carga independiente)',discordCount:discordDeals.length,currency:'USD',complete:discordDeals.length===0&&!!updated&&!error,discordScope:"Solo mensajes cargados en esta sesión; no implica historial completo",received:hiddenDeals.length,apiTotal:total,inStoreAdded:feedAdded,restrictedFeedItems:feedLocked,includeHistory:history,deals:filtered.map(d=>({id:d.id,title:publicCopy(dealPrice(d).title),description:publicCopy(d.dealContent),retailer:retailerName(d.retailer),createdAt:d.createdAt,expiresAt:d.expiresAt,displayPrice:d.source==='discord'?null:{...dealPrice(d),title:publicCopy(dealPrice(d).title)}}))},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='clearance-radar.json';a.click();URL.revokeObjectURL(u);setToast(`${number(filtered.length)} ofertas exportadas`);};
  const copy=async(s:string)=>{try{await navigator.clipboard.writeText(s);setToast('Copiado al portapapeles');}catch{setToast('No se pudo copiar. Selecciona el texto manualmente.');}};
  const isFiltered=!!(showReview||query||retailer||minDiscount||tag||maxPrice||status!=='all');
  if(showInitialLoader)return <InitialLoader/>;
@@ -133,8 +131,6 @@ export default function Dashboard(){
   </aside>
   <div className="main-shell"><header className="topbar"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/><strong>{section==='staffspicks'?'Staff Picks':section==='saved'?'Guardadas':section==='network'?'Actividad de API':'Explorar ofertas'}</strong></div><div className="topbar-right"><span className={`connection ${section!=='staffspicks'&&error?'warning':''}`}><i/>{section==='staffspicks'?'Staff Picks':error?'Conexión interrumpida':loading?'Sincronizando API':updated?'API conectada':'Carga parcial'}</span><span className="currency">USD</span><span className="avatar">LR</span></div></header>
    <main>{section==='staffspicks'?<StaffPicks/>:<><div className="title-row"><div><div className="eyebrow"><span/> ENCUENTRA MÁS. PAGA MENOS.</div><h1>{section==='saved'?'Tus mejores hallazgos.':section==='network'?'Del origen a tu radar.':'Todas las ofertas. Un solo lugar.'}</h1><p className="subtitle">{section==='saved'?'Las ofertas que guardaste, siempre a mano en este navegador.':section==='network'?'Consulta la actividad de carga de tus ofertas.':'Explora, compara y encuentra tu próximo gran descuento.'}</p></div><button className="primary sync" onClick={()=>sync(history)} disabled={loading}><RefreshCw size={16} className={loading?'spin':''}/>{loading?'Sincronizando':'Sincronizar'}</button></div>
-    <div className="stats"><Stat icon={<Package size={19}/>} label="Ofertas recibidas" value={number(deals.length)} note={total?`${number(hiddenDeals.length-feedAdded)}/${number(total)} catálogo + ${number(feedAdded)} en tienda`:'Esperando respuesta de la API'}/><Stat icon={<Tag size={19}/>} label="Grandes descuentos" value={number(high)} note="con 70% de descuento o más" accent/><Stat icon={<Store size={19}/>} label="Tiendas disponibles" value={number(stores.length)} note="en las ofertas recibidas"/><Stat icon={<CheckCircle2 size={19}/>} label="Ofertas vigentes" value={number(active)} note="según estado y fecha del origen"/></div>
-    <div className="sync-line" role="status"><span><span className={`status-dot ${loading?'pulsing':''}`}/>{loading?(waiting||`Recibiendo página ${progress.done} de ${progress.pages||'…'} · ${number(deals.length)} ofertas`):error?'Sincronización incompleta':stopped?'Sincronización detenida · datos parciales':updated?`Última sincronización: ${date(updated)} (Cancún)`:'Preparando conexión…'}</span><div><label><input type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)}/> Actualizar cada 5 min</label>{loading&&<button onClick={()=>{controller.current?.abort();setStopped(true);setLoading(false);}}><Pause size={13}/> Detener</button>}</div></div>
     <div className="session-line"><span>{sessionInfo.status==='active'?'Consulta tiendas con tu código postal':'Ofertas disponibles'}</span>{canManageInventory&&<a href="/settings/inventory" target="_blank" rel="noopener noreferrer">{sessionInfo.status==='active'?'Administrar inventario':'Restablecer inventario'}</a>}{feedAdded>0&&<span>+{number(feedAdded)} ofertas en tienda</span>}{feedLocked>0&&<span>{feedLocked} ofertas restringidas por el origen</span>}</div>
     {loading&&<div className="progress-track"><div style={{width:`${progress.pages?progress.done/progress.pages*100:2}%`}}/></div>}
     {error&&<div className="error-banner"><AlertCircle size={18}/><span>{publicCopy(error)} Se conservan las {number(deals.length)} ofertas recibidas.</span><button onClick={()=>sync(history)}>Reintentar</button></div>}
@@ -162,6 +158,5 @@ export default function Dashboard(){
   {toast&&<div className="toast" role="status"><Check size={17}/>{toast}</div>}
  </div>;
 }
-function Stat({icon,label,value,note,accent=false}:{icon:React.ReactNode;label:string;value:string;note:string;accent?:boolean}){return <div className={accent?'stat-card accent':'stat-card'}><div className="stat-label">{label}<span>{icon}</span></div><strong>{value}</strong><small>{accent&&<span className="tiny-arrow">↗</span>}{note}</small></div>;}
 function RadioMark(){return <Activity size={19}/>;}
 

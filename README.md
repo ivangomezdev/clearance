@@ -47,8 +47,8 @@ El script `npm run build` conserva el build de Vinext/Cloudflare usado por Sites
 - Carga todas las páginas del alcance seleccionado, con peticiones secuenciales separadas por al menos 1,25 segundos, y elimina duplicados por ID.
 - Por defecto carga activas; **Incluir historial** vuelve a cargar también las inactivas/vencidas. Los contadores y filtros corresponden al conjunto recibido.
 - Los resultados se presentan en páginas de 24 tarjetas, sin limitar el conjunto de datos descargado.
-- La carga puede detenerse. Un fallo conserva datos parciales y muestra el error; no se simulan productos ni se presentan datos parciales como completos.
-- Actualización opcional cada cinco minutos mientras la pestaña está visible. No hay sincronización en segundo plano con la app cerrada.
+- Un fallo de carga conserva datos parciales y muestra el error; no se simulan productos ni se presentan datos parciales como completos.
+- Actualización manual mediante el botón Sincronizar.
 - Búsqueda, tiendas, descuento, estado, etiquetas, precio, orden, cuadrícula/lista y exportación JSON.
 - Favoritos guardados en localStorage. Se muestran solo los que están presentes en el catálogo cargado; activar historial permite encontrar favoritos vencidos.
 - Detalle con texto, precios USD, fechas en America/Cancun, cupones copiables, respuesta JSON y resolución real de Get Deal.
