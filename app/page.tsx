@@ -15,6 +15,7 @@ import {StoreAvailability} from '../components/store-availability';
 import {DiscordSource} from '../components/discord-source';
 import {RetailerLogo} from '../components/retailer-logo';
 import {RadarLogo} from '../components/radar-logo';
+import {AccountAvatar, SidebarAccount} from '../components/sidebar-account';
 import {Deal,dealPrice,dealSku,discount,expired,retailerName,safeUrl,sourceUrl} from '../lib/deals';
 
 type Log=CatalogLog&{id:number};
@@ -90,7 +91,7 @@ export default function Dashboard(){
  return <div className="app-shell">
   <aside className="sidebar">
    <a href="/" className="brand" aria-label="Clearance Radar · Inicio"><span className="brand-icon"><RadarLogo size={44}/></span><span>clearance<span className="brand-bottom">radar<span className="brand-dot">.</span></span></span></a>
-   <div className="workspace-label">TU OBSERVATORIO DE OFERTAS</div>
+   <div className="sidebar-scroll"><div className="workspace-label">TU OBSERVATORIO DE OFERTAS</div>
    <nav aria-label="Navegación principal">
     <button className={section==='staffspicks'?'nav-item selected':'nav-item'} onClick={()=>setSection('staffspicks')}><Tag size={18}/> staffspicks</button>
     <button className={section==='offers'?'nav-item selected':'nav-item'} onClick={()=>setSection('offers')}><LayoutGrid size={18}/> Explorar ofertas <span className="nav-count">{deals.length?number(deals.length):'—'}</span></button>
@@ -99,9 +100,9 @@ export default function Dashboard(){
    </nav>
    <div className="sidebar-divider"/><div className="workspace-label">TIENDAS EN EL RADAR</div>
    <div className="store-nav">{stores.filter(([s])=>QUICK_RETAILERS.some(store=>store===s)).map(([s,n])=><button className={retailer===s?'store-selected':''} key={s} onClick={()=>{setRetailer(s);setSection('offers');}}><RetailerLogo retailer={s} className="store-symbol"/><span>{retailerName(s)}</span><small>{number(n)}</small></button>)}</div>
-   <div className="sidebar-bottom"><div className="source-card"><span className="source-icon"><RadarLogo size={24}/></span><strong>Tu próximo gran hallazgo</strong><p>Descubre más.<br/>Paga menos.</p></div><div className="profile"><span>LR</span><div>Mi espacio personal<small>Clearance Radar</small></div><span className="profile-dot"/></div></div>
+   </div><div className="sidebar-bottom"><SidebarAccount/></div>
   </aside>
-  <div className="main-shell"><header className="topbar"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/><strong>{section==='staffspicks'?'Staff Picks':section==='saved'?'Guardadas':section==='network'?'Actividad de API':'Explorar ofertas'}</strong></div><div className="topbar-right"><span className={`connection ${section!=='staffspicks'&&error?'warning':''}`}><i/>{section==='staffspicks'?'Staff Picks':error?'Conexión interrumpida':loading?'Sincronizando API':updated?'API conectada':'Carga parcial'}</span><span className="currency">USD</span><span className="avatar">LR</span></div></header>
+  <div className="main-shell"><header className="topbar"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/><strong>{section==='staffspicks'?'Staff Picks':section==='saved'?'Guardadas':section==='network'?'Actividad de API':'Explorar ofertas'}</strong></div><div className="topbar-right"><span className={`connection ${section!=='staffspicks'&&error?'warning':''}`}><i/>{section==='staffspicks'?'Staff Picks':error?'Conexión interrumpida':loading?'Sincronizando API':updated?'API conectada':'Carga parcial'}</span><span className="currency">USD</span><AccountAvatar/></div></header>
    <main>{section==='staffspicks'?<StaffPicks/>:<><div className="title-row"><div><div className="eyebrow"><span/> ENCUENTRA MÁS. PAGA MENOS.</div><h1>{section==='saved'?'Tus mejores hallazgos.':section==='network'?'Del origen a tu radar.':'Todas las ofertas. Un solo lugar.'}</h1><p className="subtitle">{section==='saved'?'Las ofertas que guardaste, siempre a mano en este navegador.':section==='network'?'Consulta la actividad de carga de tus ofertas.':'Explora, compara y encuentra tu próximo gran descuento.'}</p></div><button className="primary sync" onClick={()=>sync(history)} disabled={loading}><RadarLogo size={20} animated={loading}/>{loading?'Sincronizando':'Sincronizar'}</button></div>
     <div className="session-line"><span>{sessionInfo.status==='active'?'Consulta tiendas con tu código postal':'Ofertas disponibles'}</span>{canManageInventory&&<a href="/settings/inventory" target="_blank" rel="noopener noreferrer">{sessionInfo.status==='active'?'Administrar inventario':'Restablecer inventario'}</a>}{feedAdded>0&&<span>+{number(feedAdded)} ofertas en tienda</span>}{feedLocked>0&&<span>{feedLocked} ofertas restringidas por el origen</span>}</div>
     {loading&&<div className="progress-track"><div style={{width:`${progress.pages?progress.done/progress.pages*100:2}%`}}/></div>}

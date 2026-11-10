@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import {AccountProvider} from '../components/account-provider';
 
 export const metadata: Metadata = {
   title: "Clearance Radar · Todas las ofertas, un solo lugar",
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><AccountProvider>{children}</AccountProvider></body>
     </html>
   );
 }

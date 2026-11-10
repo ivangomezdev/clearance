@@ -4,6 +4,8 @@ Dashboard en español conectado a las ofertas públicas de Hidden Clearances. Pr
 
 ## Ejecutar
 
+Las cuentas propias usan Supabase Auth y PostgreSQL, con páginas `/login`, `/registro` y `/cuenta`. Sigue [la configuración de cuentas en Vercel](docs/accounts-setup.md): ejecutar el SQL, añadir dos variables y configurar el retorno de confirmación por email. Sin esa configuración, el acceso queda desactivado y no se simulan usuarios ni planes.
+
 ### Vercel / Next.js
 
 La instalación canónica es `https://clearance-two.vercel.app`, donde se mantiene el inventario compartido con renovación automática al consultar. `clearance-4gma.vercel.app` redirige a ella conservando la ruta y los parámetros; esa segunda instalación no tenía los secretos de inventario. La regla se limita al dominio alternativo y no redirige la instalación principal ni los previews. Así ambas direcciones públicas utilizan una sola conexión renovable, en lugar de mantener copias independientes de los tokens.
